@@ -1,0 +1,29 @@
+server:
+  port: 8105
+
+spring:
+  application:
+    name: core-storage
+  datasource:
+    url: jdbc:sqlite:./data/core-storage.db
+    driver-class-name: org.sqlite.JDBC
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+core:
+  storage:
+    driver: local
+    local:
+      root: ./data/storage
+      date-path: true

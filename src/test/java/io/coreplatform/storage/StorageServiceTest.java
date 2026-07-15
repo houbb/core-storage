@@ -24,6 +24,7 @@ class StorageServiceTest {
     private StorageFileRepository repository;
     private StorageDriver driver;
     private StorageProperties properties;
+    private StorageMetadataService metadataService;
 
     @TempDir
     Path tempDir;
@@ -38,8 +39,9 @@ class StorageServiceTest {
 
         driver = mock(StorageDriver.class);
         repository = mock(StorageFileRepository.class);
+        metadataService = mock(StorageMetadataService.class);
 
-        service = new StorageService(repository, driver, properties);
+        service = new StorageService(repository, driver, properties, metadataService);
     }
 
     @Test
@@ -52,8 +54,9 @@ class StorageServiceTest {
             f.setId(1L);
             return f;
         });
+        when(metadataService.saveMetadata(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        StorageFileResponse resp = service.upload(file);
+        StorageFileResponse resp = service.upload(file, null, null, null, null, null, null, null, null);
 
         assertEquals(1L, resp.getId());
         assertEquals("/api/v1/storage/file/1", resp.getDownloadUrl());
@@ -62,6 +65,7 @@ class StorageServiceTest {
 
         verify(driver).upload(anyString(), anyString(), any());
         verify(repository).save(any());
+        verify(metadataService).saveMetadata(any());
     }
 
     @Test

@@ -1,13 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { StorageFileInfo } from '../api/storage'
+import type { StorageFileInfo, UploadMetadata } from '../api/storage'
 import { uploadFile, getFileInfo, deleteFile } from '../api/storage'
 
 export const useStorageStore = defineStore('storage', () => {
   const files = ref<StorageFileInfo[]>([])
 
-  async function upload(file: File, onProgress?: (p: number) => void, signal?: AbortSignal) {
-    const result = await uploadFile(file, { onProgress, signal })
+  async function upload(file: File, onProgress?: (p: number) => void, signal?: AbortSignal, metadata?: UploadMetadata) {
+    const result = await uploadFile(file, { onProgress, signal }, metadata)
     files.value.unshift(result)
     return result
   }

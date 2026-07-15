@@ -30,9 +30,18 @@ public class StorageController {
     }
 
     @PostMapping("/upload")
-    @Operation(summary = "上传文件")
-    public StorageFileResponse upload(@RequestParam("file") MultipartFile file) throws IOException {
-        return service.upload(file);
+    @Operation(summary = "上传文件（支持可选元数据 + 自动引用）")
+    public StorageFileResponse upload(@RequestParam("file") MultipartFile file,
+                                       @RequestParam(required = false) String ownerType,
+                                       @RequestParam(required = false) String ownerId,
+                                       @RequestParam(required = false) String system,
+                                       @RequestParam(required = false) String module,
+                                       @RequestParam(required = false) String businessType,
+                                       @RequestParam(required = false) String businessId,
+                                       @RequestParam(required = false) String tags,
+                                       @RequestParam(required = false) String remark) throws IOException {
+        return service.upload(file, ownerType, ownerId, system, module,
+                businessType, businessId, tags, remark);
     }
 
     @GetMapping("/file/{id}")

@@ -1,10 +1,15 @@
 package io.coreplatform.storage.api.controller;
 
 import io.coreplatform.storage.application.domain.StorageFile;
+import io.coreplatform.storage.application.domain.StorageMetadata;
 import io.coreplatform.storage.application.port.StorageDriver;
+import io.coreplatform.storage.application.service.StorageMetadataService;
 import io.coreplatform.storage.application.service.StorageService;
 import io.coreplatform.storage.infrastructure.config.StorageProperties;
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageFileRepository;
+import io.coreplatform.storage.infrastructure.persistence.repository.StorageMetadataIndexRepository;
+import io.coreplatform.storage.infrastructure.persistence.repository.StorageMetadataRepository;
+import io.coreplatform.storage.infrastructure.persistence.repository.StorageReferenceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,11 +23,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(StorageController.class)
+@WebMvcTest({StorageController.class, StorageMetadataController.class})
 @Import(StorageControllerTest.TestConfig.class)
 class StorageControllerTest {
 
@@ -33,6 +39,12 @@ class StorageControllerTest {
     private StorageFileRepository repository;
     @Autowired
     private StorageDriver driver;
+    @Autowired
+    private StorageMetadataRepository metadataRepo;
+    @Autowired
+    private StorageReferenceRepository referenceRepo;
+    @Autowired
+    private StorageMetadataIndexRepository indexRepo;
 
     @TestConfiguration
     static class TestConfig {
@@ -58,13 +70,41 @@ class StorageControllerTest {
         }
 
         @Bean
-        StorageService storageService(StorageFileRepository repo, StorageDriver driver, StorageProperties props) {
-            return new StorageService(repo, driver, props);
+        StorageMetadataRepository storageMetadataRepository() {
+            return mock(StorageMetadataRepository.class);
+        }
+
+        @Bean
+        StorageReferenceRepository storageReferenceRepository() {
+            return mock(StorageReferenceRepository.class);
+        }
+
+        @Bean
+        StorageMetadataIndexRepository storageMetadataIndexRepository() {
+            return mock(StorageMetadataIndexRepository.class);
+        }
+
+        @Bean
+        StorageMetadataService storageMetadataService(StorageMetadataRepository metadataRepo,
+                                                         StorageReferenceRepository referenceRepo,
+                                                         StorageMetadataIndexRepository indexRepo) {
+            return new StorageMetadataService(metadataRepo, referenceRepo, indexRepo);
+        }
+
+        @Bean
+        StorageService storageService(StorageFileRepository repo, StorageDriver driver,
+                                       StorageProperties props, StorageMetadataService metadataService) {
+            return new StorageService(repo, driver, props, metadataService);
         }
 
         @Bean
         StorageController storageController(StorageService service) {
             return new StorageController(service);
+        }
+
+        @Bean
+        StorageMetadataController storageMetadataController(StorageMetadataService metadataService) {
+            return new StorageMetadataController(metadataService);
         }
 
         @Bean
@@ -75,7 +115,7 @@ class StorageControllerTest {
 
     @BeforeEach
     void resetMocks() {
-        reset(repository, driver);
+        reset(repository, driver, metadataRepo, referenceRepo, indexRepo);
     }
 
     @Test
@@ -84,6 +124,11 @@ class StorageControllerTest {
             var f = (StorageFile) inv.getArgument(0);
             f.setId(1L);
             return f;
+        });
+        when(metadataRepo.save(any())).thenAnswer(inv -> {
+            var m = (StorageMetadata) inv.getArgument(0);
+            m.setId(10L);
+            return m;
         });
 
         MockMultipartFile file = new MockMultipartFile(
@@ -129,6 +174,7 @@ class StorageControllerTest {
         domain.setId(1L);
         domain.setDeleted(false);
         domain.setStatus("ACTIVE");
+        domain.setUuid("abc123");
 
         when(repository.findById(1L)).thenReturn(Optional.of(domain));
 

@@ -1,5 +1,6 @@
 package io.coreplatform.storage.api.exception;
 
+import io.coreplatform.storage.application.service.StorageMetadataService;
 import io.coreplatform.storage.application.service.StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +24,26 @@ public class GlobalExceptionHandler {
         pd.setTitle("File not found");
         pd.setType(URI.create("https://core-platform.dev/problems/file-not-found"));
         pd.setProperty("errorCode", "STORAGE_FILE_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageMetadataService.MetadataNotFoundException.class)
+    public ProblemDetail handleMetadataNotFound(StorageMetadataService.MetadataNotFoundException ex) {
+        log.warn("Metadata not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Metadata not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/metadata-not-found"));
+        pd.setProperty("errorCode", "STORAGE_METADATA_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageMetadataService.ReferenceNotFoundException.class)
+    public ProblemDetail handleReferenceNotFound(StorageMetadataService.ReferenceNotFoundException ex) {
+        log.warn("Reference not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Reference not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/reference-not-found"));
+        pd.setProperty("errorCode", "STORAGE_REFERENCE_NOT_FOUND");
         return pd;
     }
 

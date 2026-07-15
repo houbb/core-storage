@@ -20,6 +20,7 @@ public class StorageResourceResponse {
     private String visibility;
     private String accessMode;
     private String status;
+    private String profileName;
     private List<String> tags;
     private List<PropertyItem> properties;
     private int referenceCount;
@@ -79,6 +80,9 @@ public class StorageResourceResponse {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getProfileName() { return profileName; }
+    public void setProfileName(String profileName) { this.profileName = profileName; }
 
     public List<String> getTags() { return tags; }
     public void setTags(List<String> tags) { this.tags = tags; }

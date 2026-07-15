@@ -26,6 +26,7 @@ public class StorageResource {
     private List<String> tags;
     private List<Property> properties;
     private int referenceCount;
+    private String profileName;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private String createUser;
@@ -75,6 +76,9 @@ public class StorageResource {
 
     public int getReferenceCount() { return referenceCount; }
     public void setReferenceCount(int referenceCount) { this.referenceCount = referenceCount; }
+
+    public String getProfileName() { return profileName; }
+    public void setProfileName(String profileName) { this.profileName = profileName; }
 
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }

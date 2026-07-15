@@ -1,4 +1,4 @@
-package io.coreplatform.storage.application.service;
+package io.coreplatform.storage;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -6,7 +6,13 @@ import static org.mockito.Mockito.*;
 
 import io.coreplatform.storage.api.response.StorageFileResponse;
 import io.coreplatform.storage.application.port.StorageDriver;
+import io.coreplatform.storage.application.domain.enums.DriverType;
+import io.coreplatform.storage.application.service.StorageImageService;
+import io.coreplatform.storage.application.service.StorageMetadataService;
+import io.coreplatform.storage.application.service.StorageResourceService;
+import io.coreplatform.storage.application.service.StorageService;
 import io.coreplatform.storage.infrastructure.config.StorageProperties;
+import io.coreplatform.storage.infrastructure.driver.StorageDriverFactory;
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageFileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,10 +29,10 @@ class StorageServiceTest {
     private StorageService service;
     private StorageFileRepository repository;
     private StorageDriver driver;
+    private StorageDriverFactory driverFactory;
     private StorageProperties properties;
     private StorageMetadataService metadataService;
     private StorageResourceService resourceService;
-
     private StorageImageService imageService;
 
     @TempDir
@@ -42,12 +48,17 @@ class StorageServiceTest {
         properties.setImage(new StorageProperties.Image());
 
         driver = mock(StorageDriver.class);
+        when(driver.type()).thenReturn(DriverType.LOCAL);
+        driverFactory = mock(StorageDriverFactory.class);
+        when(driverFactory.getDriverForProfile(isNull())).thenReturn(driver);
+        when(driverFactory.getDriverForProfile(anyString())).thenReturn(driver);
+
         repository = mock(StorageFileRepository.class);
         metadataService = mock(StorageMetadataService.class);
         resourceService = mock(StorageResourceService.class);
         imageService = mock(StorageImageService.class);
 
-        service = new StorageService(repository, driver, properties, metadataService, resourceService, imageService);
+        service = new StorageService(repository, driverFactory, properties, metadataService, resourceService, imageService);
     }
 
     @Test
@@ -72,6 +83,29 @@ class StorageServiceTest {
         verify(driver).upload(anyString(), anyString(), any());
         verify(repository).save(any());
         verify(metadataService).saveMetadata(any());
+    }
+
+    @Test
+    void uploadWithProfileResolvesCorrectDriver() throws IOException {
+        StorageDriver profileDriver = mock(StorageDriver.class);
+        when(profileDriver.type()).thenReturn(DriverType.LOCAL);
+        when(driverFactory.getDriverForProfile("image")).thenReturn(profileDriver);
+
+        MultipartFile file = new MockMultipartFile(
+                "file", "test.png", "image/png", "hello".getBytes());
+
+        when(repository.save(any())).thenAnswer(inv -> {
+            var f = (io.coreplatform.storage.application.domain.StorageFile) inv.getArgument(0);
+            f.setId(2L);
+            return f;
+        });
+        when(metadataService.saveMetadata(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.uploadWithProfile(file, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, "image");
+
+        verify(driverFactory).getDriverForProfile("image");
+        verify(profileDriver).upload(anyString(), anyString(), any());
     }
 
     @Test

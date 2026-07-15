@@ -27,3 +27,5 @@ core:
     local:
       root: ./data/storage
       date-path: true
+    database:
+      enabled: false

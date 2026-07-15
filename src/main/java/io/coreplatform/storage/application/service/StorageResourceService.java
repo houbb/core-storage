@@ -55,7 +55,8 @@ public class StorageResourceService {
                                            String visibility,
                                            String accessMode,
                                            List<String> tags,
-                                           Map<String, String> properties) {
+                                           Map<String, String> properties,
+                                           String profileName) {
         StorageResource resource = new StorageResource();
         resource.setResourceUuid(UUID.randomUUID().toString().replace("-", ""));
         resource.setMetadataUuid(metadataUuid);
@@ -68,6 +69,7 @@ public class StorageResourceService {
         resource.setVisibility(safeEnum(Visibility.class, visibility, Visibility.PUBLIC));
         resource.setAccessMode(safeEnum(AccessMode.class, accessMode, AccessMode.PUBLIC));
         resource.setStatus(ResourceStatus.UPLOADING);
+        resource.setProfileName(profileName != null && !profileName.isBlank() ? profileName : "default");
 
         StorageResource saved = resourceRepo.save(resource);
 
@@ -218,6 +220,7 @@ public class StorageResourceService {
         resp.setOwnerId(r.getOwnerId());
         resp.setVisibility(r.getVisibility() != null ? r.getVisibility().name() : null);
         resp.setAccessMode(r.getAccessMode() != null ? r.getAccessMode().name() : "PUBLIC");
+        resp.setProfileName(r.getProfileName());
         resp.setStatus(r.getStatus() != null ? r.getStatus().name() : null);
         resp.setTags(r.getTags());
         resp.setProperties(r.getProperties().stream()

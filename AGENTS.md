@@ -4,6 +4,12 @@
 
 ---
 
+# 沟通语言 ⚠️ 强制遵守
+
+**全程使用中文沟通。** 包括但不限于：代码注释、commit message、PR 描述、设计文档、问题分析、错误报告。唯一例外是代码标识符（类名、方法名、变量名）使用英文。
+
+---
+
 # 沟通规范 ⚠️ 强制遵守
 
 **需要你向我提问时，必须使用选项列表，禁止用散文/段落罗列问题。**
@@ -47,7 +53,26 @@
 
 # 测试验证 ⚠️ 强制执行
 
-单元断言测试+端到端测试
+**每次实现完成后，必须执行以下验证，禁止跳过：**
+
+1. **单元测试** — 所有新增/修改的业务逻辑必须有 JUnit5 断言测试，覆盖正常路径 + 关键异常路径
+2. **端到端测试** — 通过 API 调用（curl / Spring MockMvc / @SpringBootTest）验证完整流程：
+   - 创建资源 → 读取资源 → 修改资源 → 删除资源
+   - 认证 → 授权 → 执行操作 → 验证副作用（审计/事件/通知）
+   - 错误输入 → 正确错误码 → 数据未被污染
+3. **回归确认** — 运行全部已有测试套件（`mvn test`），确保已有功能未被破坏
+4. **编译确认** — `mvn compile` 零错误通过
+
+**禁止行为：**
+- ❌ 写完代码不跑测试就提交
+- ❌ 只跑新的测试不跑回归
+- ❌ 测试失败时强行提交
+- ❌ 跳过端到端验证，只说"理论上应该可以"
+
+**完成后必须回答这三个问题：**
+1. 本次改动是否已有测试覆盖？
+2. 全部已有测试是否仍然通过？
+3. 端到端流程是否已验证通过？
 
 # 执行原则
 
@@ -56,33 +81,49 @@
 - **实现优先，统一验证** — 先实现全部功能（后端+前端+注册+i18n），最后统一跑四步验证。实现过程中不插桩运行 cargo check / vue-tsc / vite build 等验证命令，避免中断流程
 - **完成后 review 3 次+小幅度优化**
 
-# Unknowns Management ⚠️ 强制
+# Unknowns Management
 
-## 🛑 硬触发规则 — 必须先于所有实现
+## 强制触发规则 (Hard Trigger) ⚠️ 必须执行
 
-**当用户提出以下任务时，你的第一个动作必须是运行 Unknowns Discovery 流程（详见 `.agents/skills/unknowns-discovery/SKILL.md`），然后才能开始编码：**
+**当用户提出以下任一类型的任务时，你必须立即执行 Unknowns Discovery 流程（见下方），然后才能开始实现：**
 
-- 🆕 新功能开发 / 新模块创建 / 新 API 端点
-- 🏗️ 架构设计 / 数据模型设计 / 分层设计
-- 🗄️ 数据库表设计或变更 / 迁移脚本
-- 🔐 认证、授权、安全相关代码
-- 🔗 跨模块 / 跨系统改动 / 多服务集成
-- 📁 多文件大范围改动（≥5 个文件）
-- ⚡ 不可逆操作（数据库迁移、数据删除、API 签名变更）
-- 🎨 用户需求含主观描述词（"简单""好看""智能""自然""Apple-like"）
+- 新功能开发 / 新模块创建
+- 架构设计 / 数据模型设计
+- 数据库表设计或变更
+- 认证、授权、安全相关代码
+- 跨模块 / 跨系统改动
+- 多文件、大范围改动（≥5 个文件）
+- 不可逆操作（如数据库迁移、删除数据）
+- 用户需求中有主观描述词（"简单""好看""智能""自然"）
+- 任何 P0-P7 设计文档的实现任务
 
-**执行流程：**
-1. 阅读 `.agents/skills/unknowns-discovery/SKILL.md`
-2. 按模板生成 Unknowns Report（确认事实 → 暴露未知 → 排名 → 决策）
-3. 需要用户决策的 → AskUserQuestion（选项式）
-4. 确认后 → 更新计划文件 → 开始实现
+**这是硬性要求，不是建议。**
 
-**可以跳过的唯一情况：**
-- 单行修复（typo、注释、格式）
-- 单文件简单 bug fix（root cause 已确认）
-- 纯代码解释 / 研究
+**Unknowns Discovery 流程（内联执行，无需外部 Skill）：**
 
-**如果你忘了做 Unknowns Discovery 直接开始写代码，这是在犯错。**
+1. **识别未知项** — 从以下维度扫描未知项：
+   - 技术选型（库的选择、算法、协议实现方式）
+   - 数据模型（表结构、字段语义、关系映射）
+   - 边界条件（并发、幂等、失败重试、超时）
+   - 安全考量（加密方式、密钥管理、攻击面）
+   - 兼容性（与已有代码、API 契约、数据迁移的冲突）
+   - 用户意图（需求中的模糊描述词）
+
+2. **分类未知项** — 按照影响范围/可逆性分类：
+   - 高风险（不可逆、范围大、安全相关）→ 必须向用户确认
+   - 中风险（可逆但耗时、跨系统）→ 建议确认
+   - 低风险（纯代码内、随时可改、单一文件）→ 采用最保守默认值并记录
+
+3. **提问确认** — 对高/中风险未知项，使用 AskUserQuestion 向用户确认（遵守上方沟通规范）
+
+4. **记录假设** — 对已确认的决策和低风险假设记录在 plan file 中
+
+**只有以下情况可以跳过：**
+- 单行修复（typo、注释修正）
+- 单文件简单 bug fix（已有明确根因）
+- 纯代码解释类问题
+
+**注意：如果 `unknowns-discovery` Skill 不存在于可用 Skill 列表中，你仍然必须执行上述内联流程。Skill 名称变化不应导致流程被跳过。**
 
 ---
 
@@ -108,7 +149,7 @@ Follow these rules:
 7. After implementation, explain what changed, what remains uncertain, and what evidence verifies the result.
 8. Convert recurring discoveries into tests, documentation, conventions, or reusable project knowledge.
 
-For substantial features, architecture changes, ambiguous product work, migrations, or cross-module changes, run the Unknowns Discovery process before implementation. The complete methodology is documented at `.agents/skills/unknowns-discovery/SKILL.md`.
+For substantial features, architecture changes, ambiguous product work, migrations, or cross-module changes, execute the Unknowns Discovery 流程 described above (内联执行，见上方强制触发规则).
 
 
 # 要求

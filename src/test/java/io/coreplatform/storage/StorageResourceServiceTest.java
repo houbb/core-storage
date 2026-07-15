@@ -49,7 +49,7 @@ class StorageResourceServiceTest {
         StorageResource result = resourceService.createResource(
                 "md-uuid-001", "avatar.png", "IMAGE", "AVATAR", "用户头像",
                 "USER", "1001", "PUBLIC", null,
-                List.of("dark", "round"), null);
+                List.of("dark", "round"), null, null);
 
         assertNotNull(result);
         assertEquals("md-uuid-001", result.getMetadataUuid());
@@ -67,7 +67,7 @@ class StorageResourceServiceTest {
         when(resourceRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         StorageResource result = resourceService.createResource(
-                "md-uuid-002", "test.zip", null, null, "", null, null, null, null, null, null);
+                "md-uuid-002", "test.zip", null, null, "", null, null, null, null, null, null, null);
 
         assertEquals(ResourceType.OTHER, result.getResourceType());
         assertEquals(ResourceCategory.OTHER, result.getCategory());
@@ -83,7 +83,7 @@ class StorageResourceServiceTest {
         props.put("height", "768");
 
         resourceService.createResource("md-uuid-003", "banner.jpg", "IMAGE", "BANNER",
-                "", "SYSTEM", "sys-1", "PUBLIC", null, null, props);
+                "", "SYSTEM", "sys-1", "PUBLIC", null, null, props, null);
 
         verify(propertyRepo).setProperties(anyString(), eq(props));
     }

@@ -13,6 +13,10 @@ public class StorageProperties {
 
     private Image image = new Image();
 
+    private Database database = new Database();
+
+    // ---- getters & setters ----
+
     public String getDriver() {
         return driver;
     }
@@ -35,6 +39,14 @@ public class StorageProperties {
 
     public void setImage(Image image) {
         this.image = image;
+    }
+
+    public Database getDatabase() {
+        return database;
+    }
+
+    public void setDatabase(Database database) {
+        this.database = database;
     }
 
     public static class Local {
@@ -68,6 +80,19 @@ public class StorageProperties {
 
         public void setMaxDimension(int maxDimension) {
             this.maxDimension = maxDimension;
+        }
+    }
+
+    public static class Database {
+        /** 数据库驱动是否启用 */
+        private boolean enabled = false;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
     }
 }

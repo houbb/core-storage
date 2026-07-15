@@ -37,6 +37,7 @@ public class StorageResourceRepository {
         e.setVisibility(rs.getString("visibility"));
         e.setStatus(rs.getString("status"));
         e.setAccessMode(rs.getString("access_mode"));
+        e.setProfileName(rs.getString("profile_name"));
         Timestamp ct = rs.getTimestamp("create_time");
         if (ct != null) e.setCreateTime(ct.toLocalDateTime());
         Timestamp ut = rs.getTimestamp("update_time");
@@ -60,9 +61,9 @@ public class StorageResourceRepository {
 
         String sql = "INSERT INTO storage_resource (" +
                 "resource_uuid, metadata_uuid, resource_name, resource_type, category, " +
-                "description, owner_type, owner_id, visibility, access_mode, status, " +
+                "description, owner_type, owner_id, visibility, access_mode, profile_name, status, " +
                 "create_time, update_time, create_user, update_user" +
-                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbc.update(con -> {
@@ -78,6 +79,7 @@ public class StorageResourceRepository {
             ps.setString(i++, entity.getOwnerId());
             ps.setString(i++, entity.getVisibility());
             ps.setString(i++, entity.getAccessMode() != null ? entity.getAccessMode() : "PUBLIC");
+            ps.setString(i++, entity.getProfileName());
             ps.setString(i++, entity.getStatus());
             ps.setTimestamp(i++, Timestamp.valueOf(entity.getCreateTime()));
             ps.setTimestamp(i++, Timestamp.valueOf(entity.getUpdateTime()));

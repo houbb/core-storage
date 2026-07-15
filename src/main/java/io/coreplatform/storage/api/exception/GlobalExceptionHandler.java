@@ -4,9 +4,12 @@ import io.coreplatform.storage.application.service.StorageAccessService;
 import io.coreplatform.storage.application.service.StorageAccessService.AccessDeniedException;
 import io.coreplatform.storage.application.service.StorageImageService;
 import io.coreplatform.storage.application.service.StorageMetadataService;
+import io.coreplatform.storage.application.service.StorageProfileService;
 import io.coreplatform.storage.application.service.StorageResourceService;
 import io.coreplatform.storage.application.service.StorageService;
 import io.coreplatform.storage.application.service.ImagePipeline;
+import io.coreplatform.storage.infrastructure.driver.DriverRegistry;
+import io.coreplatform.storage.infrastructure.driver.StorageDriverFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -117,6 +120,68 @@ public class GlobalExceptionHandler {
         pd.setTitle("Upload too large");
         pd.setType(URI.create("https://core-platform.dev/problems/upload-too-large"));
         pd.setProperty("errorCode", "STORAGE_UPLOAD_TOO_LARGE");
+        return pd;
+    }
+
+    // ---- P5: Driver & Profile exceptions ----
+
+    @ExceptionHandler(DriverRegistry.DriverNotFoundException.class)
+    public ProblemDetail handleDriverNotFound(DriverRegistry.DriverNotFoundException ex) {
+        log.warn("Driver not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Driver not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/driver-not-found"));
+        pd.setProperty("errorCode", "STORAGE_DRIVER_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageDriverFactory.ProfileNotFoundException.class)
+    public ProblemDetail handleProfileNotFound(StorageDriverFactory.ProfileNotFoundException ex) {
+        log.warn("Profile not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Profile not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/profile-not-found"));
+        pd.setProperty("errorCode", "STORAGE_PROFILE_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageProfileService.ProfileNotFoundException.class)
+    public ProblemDetail handleProfileServiceNotFound(StorageProfileService.ProfileNotFoundException ex) {
+        log.warn("Profile not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Profile not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/profile-not-found"));
+        pd.setProperty("errorCode", "STORAGE_PROFILE_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageProfileService.ProfileAlreadyExistsException.class)
+    public ProblemDetail handleProfileAlreadyExists(StorageProfileService.ProfileAlreadyExistsException ex) {
+        log.warn("Profile already exists: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setTitle("Profile already exists");
+        pd.setType(URI.create("https://core-platform.dev/problems/profile-already-exists"));
+        pd.setProperty("errorCode", "STORAGE_PROFILE_ALREADY_EXISTS");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageProfileService.InvalidDriverException.class)
+    public ProblemDetail handleInvalidDriver(StorageProfileService.InvalidDriverException ex) {
+        log.warn("Invalid driver: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        pd.setTitle("Invalid driver");
+        pd.setType(URI.create("https://core-platform.dev/problems/invalid-driver"));
+        pd.setProperty("errorCode", "STORAGE_INVALID_DRIVER");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageProfileService.CannotDeleteDefaultProfileException.class)
+    public ProblemDetail handleCannotDeleteDefault(StorageProfileService.CannotDeleteDefaultProfileException ex) {
+        log.warn("Cannot delete default profile: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        pd.setTitle("Cannot delete default profile");
+        pd.setType(URI.create("https://core-platform.dev/problems/cannot-delete-default-profile"));
+        pd.setProperty("errorCode", "STORAGE_CANNOT_DELETE_DEFAULT_PROFILE");
         return pd;
     }
 

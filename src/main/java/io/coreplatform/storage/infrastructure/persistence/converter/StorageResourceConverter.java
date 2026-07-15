@@ -30,6 +30,7 @@ public final class StorageResourceConverter {
         d.setOwnerId(e.getOwnerId());
         d.setVisibility(safeEnum(Visibility.class, e.getVisibility(), Visibility.PUBLIC));
         d.setAccessMode(safeEnum(AccessMode.class, e.getAccessMode(), AccessMode.PUBLIC));
+        d.setProfileName(e.getProfileName());
         d.setStatus(safeEnum(ResourceStatus.class, e.getStatus(), ResourceStatus.UPLOADING));
         d.setCreateTime(e.getCreateTime());
         d.setUpdateTime(e.getUpdateTime());
@@ -52,6 +53,7 @@ public final class StorageResourceConverter {
         e.setOwnerId(d.getOwnerId());
         e.setVisibility(d.getVisibility() != null ? d.getVisibility().name() : "PUBLIC");
         e.setAccessMode(d.getAccessMode() != null ? d.getAccessMode().name() : "PUBLIC");
+        e.setProfileName(d.getProfileName());
         e.setStatus(d.getStatus() != null ? d.getStatus().name() : "UPLOADING");
         e.setCreateTime(d.getCreateTime());
         e.setUpdateTime(d.getUpdateTime());

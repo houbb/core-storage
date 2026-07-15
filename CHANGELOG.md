@@ -1,5 +1,53 @@
 # CHANGELOG
 
+## [0.6.0] — 2026-07-16
+
+### Added — P5 Storage Driver Runtime
+
+- **扩展 StorageDriver SPI** — 接口从 4 个方法扩展为 10 个：新增 `type()`、`capabilities()`、`move()`、`copy()`、`metadata()`、`url()`、`health()`，建立完整的统一驱动契约
+- **DriverType 枚举（10 种）** — LOCAL / DATABASE / MINIO / S3 / OSS / COS / AZURE / NAS / FTP / CUSTOM，每个驱动声明自己的类型
+- **StorageCapability 枚举（6 种）** — MULTIPART_UPLOAD / VERSIONING / SIGNED_URL / STREAMING / TRANSACTION / LIFECYCLE，Runtime 根据能力声明自动启用/隐藏功能，替代 `instanceof` 判断
+- **DriverRegistry 运行中心** — `@Component`，维护运行中所有驱动实例的 Live Map（ConcurrentHashMap），支持运行时注册/注销/查找，为热插拔提供基础
+- **StorageDriverFactory** — 根据 profile/资源 UUID 解析对应驱动：`Resource → profile_name → StorageProfile → driver_name → DriverRegistry → StorageDriver`
+- **StorageProfile（存储配置）** — `storage_profile` 表，profile 与 driver 绑定；"default" profile 默认绑定 Local driver；管理员可在不修改代码的情况下切换存储后端
+- **StorageDriverInfo 运行时信息** — `storage_driver` 表，记录驱动注册状态、版本、启用状态、运行时状态（DriverStatus）+ 健康状态（DriverHealth）
+- **DatabaseDriver** — 第二个正式 StorageDriver 实现，文件以 BLOB 形式存储在 `storage_driver_blob` 表中，支持多节点共享（SQLite/MySQL 自动适配），`capabilities()` 返回 `{TRANSACTION}`
+- **LocalDiskDriver 增强** — 实现全部新 SPI 方法：`health()` 检查磁盘可读写，`url()` 返回 `file://` 路径，`move()`/`copy()` 使用 `Files.move/copy`
+- **REST API — Driver 管理** — `GET /api/v1/storage/drivers`（驱动列表+健康状态）、`GET /{name}`（详情）、`GET /{name}/health`（健康检查）
+- **REST API — Profile 管理** — `GET /api/v1/storage/profiles`（列表）、`POST /`（创建）、`PUT /{id}`（切换驱动）、`DELETE /{id}`（删除）、`POST /{id}/default`（设为默认）
+- **上传支持 Profile** — `StorageService` 新增 `uploadWithProfile()` 方法，上传时可指定 profile 选择存储后端
+- **Resource 绑定 Profile** — `storage_resource` 新增 `profile_name`（nullable），资源与存储介质解耦；切换 Profile 即可切换存储，无需修改 Resource
+- **驱动生命周期管理** — DriverStatus 枚举（LOADED→INITIALIZING→HEALTH_CHECK→RUNNING→STOPPING→STOPPED→DISABLED→ERROR），启动时自动初始化并健康检查
+- **启动自动初始化** — `ApplicationRunner` 启动时：(1) 同步所有驱动到 `storage_driver` 表，(2) 如 `storage_profile` 表为空则自动创建 "default" profile 绑定 "local"
+- **异常处理** — 6 个新异常处理器：DriverNotFoundException（404）、ProfileNotFoundException（404）、ProfileAlreadyExistsException（409）、InvalidDriverException（400）、CannotDeleteDefaultProfileException（400）
+
+### Changed
+
+- `StorageDriver` 接口从 4 个方法扩展为 10 个方法（新增 6 个），所有 Driver 实现必须更新
+- `LocalDiskDriver` 完全重写为完整 SPI 实现
+- `StorageService` 构造函数：`StorageDriver` → `StorageDriverFactory`，上传/下载通过工厂解析驱动
+- `StorageResourceService.createResource()` 新增 `profileName` 参数
+- `StorageResource` 持久化链路（Domain/Entity/Converter/Repository/Response）新增 `profileName` 字段
+- `StorageConfig` 重构为多驱动架构：创建 Local + Database 驱动 → 注册到 Registry → 创建 Factory → 自动初始化
+- `StorageProperties` 新增 `Database` 内部类（enabled 配置）
+- `StorageController` 上传接口中 driver 调用从直接 `driver.upload()` 改为通过工厂解析
+- `GlobalExceptionHandler` 新增 6 个 P5 异常处理器
+- 数据库迁移 V6：新增 `storage_driver`、`storage_profile`、`storage_driver_blob` 三张表，`storage_resource` 新增 `profile_name` 列
+
+### Architecture
+
+```
+Resource → profile_name → StorageProfile → driver_name → DriverRegistry → StorageDriver
+```
+
+### Backward Compatibility
+
+- 现有 P0-P4 API 完全兼容，默认使用 "default" profile（绑定 Local driver）
+- `StorageDriver` 接口只扩展不删除，原有 4 个方法签名不变
+- `storage_resource.profile_name` 为 nullable，已有资源无需回填
+
+---
+
 ## [0.5.0] — 2026-07-16
 
 ### Added — P4 Image Runtime

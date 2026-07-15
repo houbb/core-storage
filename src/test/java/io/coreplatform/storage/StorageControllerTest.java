@@ -1,13 +1,16 @@
 package io.coreplatform.storage.api.controller;
 
+import io.coreplatform.storage.api.response.StorageFileResponse;
 import io.coreplatform.storage.application.domain.StorageFile;
 import io.coreplatform.storage.application.domain.StorageMetadata;
+import io.coreplatform.storage.application.domain.enums.DriverType;
 import io.coreplatform.storage.application.port.StorageDriver;
 import io.coreplatform.storage.application.service.StorageImageService;
 import io.coreplatform.storage.application.service.StorageMetadataService;
 import io.coreplatform.storage.application.service.StorageResourceService;
 import io.coreplatform.storage.application.service.StorageService;
 import io.coreplatform.storage.infrastructure.config.StorageProperties;
+import io.coreplatform.storage.infrastructure.driver.StorageDriverFactory;
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageFileRepository;
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageMetadataIndexRepository;
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageMetadataRepository;
@@ -42,6 +45,10 @@ class StorageControllerTest {
     @Autowired
     private StorageDriver driver;
     @Autowired
+    private StorageDriverFactory driverFactory;
+    @Autowired
+    private StorageService storageService;
+    @Autowired
     private StorageMetadataRepository metadataRepo;
     @Autowired
     private StorageReferenceRepository referenceRepo;
@@ -58,7 +65,16 @@ class StorageControllerTest {
 
         @Bean
         StorageDriver storageDriver() {
-            return mock(StorageDriver.class);
+            StorageDriver driver = mock(StorageDriver.class);
+            when(driver.type()).thenReturn(DriverType.LOCAL);
+            return driver;
+        }
+
+        @Bean
+        StorageDriverFactory storageDriverFactory(StorageDriver driver) {
+            StorageDriverFactory factory = mock(StorageDriverFactory.class);
+            when(factory.getDriverForProfile(any())).thenReturn(driver);
+            return factory;
         }
 
         @Bean
@@ -105,11 +121,8 @@ class StorageControllerTest {
         }
 
         @Bean
-        StorageService storageService(StorageFileRepository repo, StorageDriver driver,
-                                       StorageProperties props, StorageMetadataService metadataService,
-                                       StorageResourceService resourceService,
-                                       StorageImageService imageService) {
-            return new StorageService(repo, driver, props, metadataService, resourceService, imageService);
+        StorageService storageService() {
+            return mock(StorageService.class);
         }
 
         @Bean
@@ -135,16 +148,8 @@ class StorageControllerTest {
 
     @Test
     void uploadReturnsJson() throws Exception {
-        when(repository.save(any())).thenAnswer(inv -> {
-            var f = (StorageFile) inv.getArgument(0);
-            f.setId(1L);
-            return f;
-        });
-        when(metadataRepo.save(any())).thenAnswer(inv -> {
-            var m = (StorageMetadata) inv.getArgument(0);
-            m.setId(10L);
-            return m;
-        });
+        when(storageService.upload(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new StorageFileResponse(1L, "/api/v1/storage/file/1", "hello.txt", 11));
 
         MockMultipartFile file = new MockMultipartFile(
                 "file", "hello.txt", "text/plain", "hello world".getBytes());
@@ -158,14 +163,8 @@ class StorageControllerTest {
 
     @Test
     void getInfoReturnsMetadata() throws Exception {
-        StorageFile domain = new StorageFile();
-        domain.setId(1L);
-        domain.setOriginalName("test.pdf");
-        domain.setSize(1024);
-        domain.setDeleted(false);
-        domain.setStatus("ACTIVE");
-
-        when(repository.findById(1L)).thenReturn(Optional.of(domain));
+        when(storageService.getInfo(1L))
+                .thenReturn(new StorageFileResponse(1L, "/api/v1/storage/file/1", "test.pdf", 1024));
 
         mvc.perform(get("/api/v1/storage/file/1/info"))
                 .andExpect(status().isOk())
@@ -176,7 +175,8 @@ class StorageControllerTest {
 
     @Test
     void getInfoReturns404() throws Exception {
-        when(repository.findById(999L)).thenReturn(Optional.empty());
+        when(storageService.getInfo(999L))
+                .thenThrow(new StorageService.FileNotFoundException("File not found: id=999"));
 
         mvc.perform(get("/api/v1/storage/file/999/info"))
                 .andExpect(status().isNotFound())
@@ -185,23 +185,18 @@ class StorageControllerTest {
 
     @Test
     void deleteReturns204() throws Exception {
-        StorageFile domain = new StorageFile();
-        domain.setId(1L);
-        domain.setDeleted(false);
-        domain.setStatus("ACTIVE");
-        domain.setUuid("abc123");
-
-        when(repository.findById(1L)).thenReturn(Optional.of(domain));
+        doNothing().when(storageService).delete(1L);
 
         mvc.perform(delete("/api/v1/storage/file/1"))
                 .andExpect(status().isNoContent());
 
-        verify(repository).softDelete(1L);
+        verify(storageService).delete(1L);
     }
 
     @Test
     void deleteReturns404ForMissingFile() throws Exception {
-        when(repository.findById(999L)).thenReturn(Optional.empty());
+        doThrow(new StorageService.FileNotFoundException("File not found: id=999"))
+                .when(storageService).delete(999L);
 
         mvc.perform(delete("/api/v1/storage/file/999"))
                 .andExpect(status().isNotFound());

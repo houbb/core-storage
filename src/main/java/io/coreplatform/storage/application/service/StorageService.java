@@ -6,6 +6,7 @@ import io.coreplatform.storage.application.domain.StorageMetadata;
 import io.coreplatform.storage.application.domain.enums.ResourceType;
 import io.coreplatform.storage.application.port.StorageDriver;
 import io.coreplatform.storage.infrastructure.config.StorageProperties;
+import io.coreplatform.storage.infrastructure.driver.StorageDriverFactory;
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageFileRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,18 +32,18 @@ public class StorageService {
     private static final Logger log = LoggerFactory.getLogger(StorageService.class);
 
     private final StorageFileRepository repository;
-    private final StorageDriver driver;
+    private final StorageDriverFactory driverFactory;
     private final StorageProperties properties;
     private final StorageMetadataService metadataService;
     private final StorageResourceService resourceService;
     private final StorageImageService imageService;
 
-    public StorageService(StorageFileRepository repository, StorageDriver driver,
+    public StorageService(StorageFileRepository repository, StorageDriverFactory driverFactory,
                            StorageProperties properties, StorageMetadataService metadataService,
                            StorageResourceService resourceService,
                            StorageImageService imageService) {
         this.repository = repository;
-        this.driver = driver;
+        this.driverFactory = driverFactory;
         this.properties = properties;
         this.metadataService = metadataService;
         this.resourceService = resourceService;
@@ -64,7 +65,7 @@ public class StorageService {
                                         String tags, String remark) throws IOException {
         return uploadInternal(multipartFile, ownerType, ownerId, system, module,
                 businessType, businessId, tags, remark,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
     }
 
     /**
@@ -82,7 +83,26 @@ public class StorageService {
                                                List<String> tagList, Map<String, String> props) throws IOException {
         return uploadInternal(multipartFile, ownerType, ownerId, system, module,
                 businessType, businessId, tags, remark,
-                resourceType, category, description, visibility, accessMode, tagList, props);
+                resourceType, category, description, visibility, accessMode, tagList, props, null);
+    }
+
+    /**
+     * P5：profile 感知上传 — 指定 profile 来决定使用哪个存储驱动。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public StorageFileResponse uploadWithProfile(MultipartFile multipartFile,
+                                                  String ownerType, String ownerId,
+                                                  String system, String module,
+                                                  String businessType, String businessId,
+                                                  String tags, String remark,
+                                                  String resourceType, String category,
+                                                  String description, String visibility,
+                                                  String accessMode,
+                                                  List<String> tagList, Map<String, String> props,
+                                                  String profileName) throws IOException {
+        return uploadInternal(multipartFile, ownerType, ownerId, system, module,
+                businessType, businessId, tags, remark,
+                resourceType, category, description, visibility, accessMode, tagList, props, profileName);
     }
 
     private StorageFileResponse uploadInternal(MultipartFile multipartFile,
@@ -93,7 +113,13 @@ public class StorageService {
                                                 String resourceType, String category,
                                                 String description, String visibility,
                                                 String accessMode,
-                                                List<String> tagList, Map<String, String> props) throws IOException {
+                                                List<String> tagList, Map<String, String> props,
+                                                String profileName) throws IOException {
+        // 获取当前使用的 driver 名称，用于保存到 metadata
+        StorageDriver resolvedDriver = driverFactory.getDriverForProfile(profileName);
+        String driverName = resolvedDriver.type().name().toLowerCase();
+        String actualProfile = (profileName != null && !profileName.isBlank()) ? profileName : "default";
+
         String originalName = multipartFile.getOriginalFilename();
         String extension = extractExtension(originalName);
         String mimeType = multipartFile.getContentType();
@@ -140,11 +166,11 @@ public class StorageService {
             metadata.setMimeType(mimeType);
             metadata.setFileSize(size);
             metadata.setHashSha256(hash);
-            metadata.setStorageDriver("local");
+            metadata.setStorageDriver(driverName);
             metadata.setStorageKey(storageKey);
             metadata.setRelativePath(relativePath);
             metadata.setStorageName(storageName);
-            metadata.setStorageType("local");
+            metadata.setStorageType(driverName);
             metadata.setOwnerType(ownerType);
             metadata.setOwnerId(ownerId);
             metadata.setSystemName(system);
@@ -185,7 +211,7 @@ public class StorageService {
                 resourceService.createResource(uuid, resourceName, inferredType,
                         category, description, ownerType, ownerId, visibility,
                         accessMode,
-                        tagListSafe, propsSafe);
+                        tagListSafe, propsSafe, actualProfile);
                 resourceService.updateStatus(uuid, "READY");
                 log.info("P2 Resource created: metadataUuid={}, type={}", uuid, inferredType);
 
@@ -206,9 +232,9 @@ public class StorageService {
 
             // 6. Driver 上传文件字节
             try (InputStream in = new FileInputStream(tempFile.toFile())) {
-                driver.upload(relativePath, storageName, in);
+                resolvedDriver.upload(relativePath, storageName, in);
             }
-            log.info("File stored: id={}, name={}", saved.getId(), storageName);
+            log.info("File stored: id={}, name={}, driver={}, profile={}", saved.getId(), storageName, driverName, actualProfile);
 
             return toResponse(saved);
 
@@ -228,7 +254,9 @@ public class StorageService {
             throw new FileNotFoundException("File has been deleted: id=" + id);
         }
 
-        InputStream in = driver.download(file.getRelativePath(), file.getStorageName());
+        // P5: 使用工厂解析 driver（通过 resource 的 profile）
+        StorageDriver resolvedDriver = driverFactory.getDriverForProfile(null);
+        InputStream in = resolvedDriver.download(file.getRelativePath(), file.getStorageName());
         return new FileDownloadResult(file, in);
     }
 

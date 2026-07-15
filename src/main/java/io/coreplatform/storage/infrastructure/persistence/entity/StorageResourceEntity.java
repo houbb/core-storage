@@ -19,6 +19,7 @@ public class StorageResourceEntity {
     private String visibility;
     private String status;
     private String accessMode;
+    private String profileName;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private String createUser;
@@ -62,6 +63,9 @@ public class StorageResourceEntity {
 
     public String getAccessMode() { return accessMode; }
     public void setAccessMode(String accessMode) { this.accessMode = accessMode; }
+
+    public String getProfileName() { return profileName; }
+    public void setProfileName(String profileName) { this.profileName = profileName; }
 
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }

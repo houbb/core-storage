@@ -1,5 +1,38 @@
 # CHANGELOG
 
+## [0.5.0] — 2026-07-16
+
+### Added — P4 Image Runtime
+
+- **图片处理管线** — `ImagePipeline` 流式 API：`from().analyze().resize().compress().convert().execute()`，每个步骤独立可组合，不修改原图
+- **图片分析** — 上传后自动提取 width/height/format/colorSpace/alpha/dpi，写入 `storage_image` 表
+- **默认变体生成** — 上传图片时自动生成 THUMBNAIL（200×200）+ WEBP（同尺寸压缩），通过配置项 `core.storage.image.max-dimension` 限制最大尺寸（默认 10000px）
+- **变体管理** — 新增 `Variant` 枚举（ORIGINAL/THUMBNAIL/SMALL/MEDIUM/LARGE/WEB/WEBP/AVIF），`storage_image_variant` 表追踪所有变体，每个变体作为独立 `StorageFile` 存储
+- **按需处理** — convert（格式转换）、compress（质量压缩）、crop（裁剪缩放），已存在变体自动去重返回
+- **REST API** — 7 个端点：`POST /api/v1/storage/images`（上传）、`GET /{uuid}`（详情+变体列表）、`GET /{uuid}/thumbnail`（缩略图 inline）、`GET /{uuid}/variant/{name}`（指定变体 inline）、`POST /{uuid}/convert`、`POST /{uuid}/compress`、`POST /{uuid}/crop`
+- **资源属性填充** — 图片元数据自动写入 `storage_resource_property`（image.width/height/format/colorSpace/hasAlpha），Resource 详情可统一展示
+- **依赖** — Thumbnailator 0.4.20（图像处理）、webp-imageio 0.1.6（WebP SPI）、commons-imaging 1.0-alpha3（AVIF 元数据读取）
+- **安全上限** — 超大图片（超过 maxDimension）在 analyze 阶段拒绝并报 HTTP 413，防止 OOM
+- **异常处理** — `ImageNotFoundException`（404）、`VariantNotFoundException`（404）、`ImageTooLargeException`（413）
+- **测试** — 58 个用例全部通过（49 个已有 + 9 个新增 ImagePipelineTest：analyze、resize、convert、chain、watermark stub、oversize rejection）
+
+### Changed
+
+- `StorageService` 构造函数新增 `StorageImageService` 参数，上传时检测 `ResourceType.IMAGE` 自动触发 P4 管线
+- `StorageProperties` 新增 `Image` 内部类（maxDimension 配置项）
+- `StorageFileRepository` 新增 `findByUuid(String)` 方法
+- `GlobalExceptionHandler` 新增 3 个图片异常处理器
+- `AGENTS.md` — 强化 Unknowns Discovery 触发规则（🛑 硬触发 + 执行流程 + 禁止跳过）
+
+### Not included (deferred)
+
+- Watermark 水印（stub，调用抛 UnsupportedOperationException）
+- AVIF 编码（best-effort fallback to WebP，等成熟纯 Java 编码器）
+- 异步管线处理（当前为同步）
+- 前端图片中心（卡片布局 / 画廊视图）
+
+---
+
 ## [0.4.0] — 2026-07-15
 
 ### Added — P3 Unified Access Runtime

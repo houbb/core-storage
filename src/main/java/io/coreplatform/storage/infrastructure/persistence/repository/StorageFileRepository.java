@@ -101,6 +101,19 @@ public class StorageFileRepository {
     }
 
     /**
+     * 根据 UUID 查询文件。
+     */
+    public Optional<StorageFile> findByUuid(String uuid) {
+        try {
+            StorageFileEntity e = jdbc.queryForObject(
+                    "SELECT * FROM storage_file WHERE uuid = ?", ROW_MAPPER, uuid);
+            return Optional.ofNullable(StorageFileConverter.toDomain(e));
+        } catch (EmptyResultDataAccessException ex) {
+            return Optional.empty();
+        }
+    }
+
+    /**
      * 软删除：标记 deleted=1, status='DELETED'
      */
     public int softDelete(Long id) {

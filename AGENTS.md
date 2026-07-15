@@ -56,27 +56,33 @@
 - **实现优先，统一验证** — 先实现全部功能（后端+前端+注册+i18n），最后统一跑四步验证。实现过程中不插桩运行 cargo check / vue-tsc / vite build 等验证命令，避免中断流程
 - **完成后 review 3 次+小幅度优化**
 
-# Unknowns Management
+# Unknowns Management ⚠️ 强制
 
-## 强制触发规则 (Hard Trigger)
+## 🛑 硬触发规则 — 必须先于所有实现
 
-**当用户提出以下任一类型的任务时，你必须立即调用 `unknowns-discovery` Skill（通过 Skill 工具），然后才能开始实现：**
+**当用户提出以下任务时，你的第一个动作必须是运行 Unknowns Discovery 流程（详见 `.agents/skills/unknowns-discovery/SKILL.md`），然后才能开始编码：**
 
-- 新功能开发 / 新模块创建
-- 架构设计 / 数据模型设计
-- 数据库表设计或变更
-- 认证、授权、安全相关代码
-- 跨模块 / 跨系统改动
-- 多文件、大范围改动
-- 不可逆操作（如数据库迁移、删除数据）
-- 用户需求中有主观描述词（"简单""好看""智能""自然"）
+- 🆕 新功能开发 / 新模块创建 / 新 API 端点
+- 🏗️ 架构设计 / 数据模型设计 / 分层设计
+- 🗄️ 数据库表设计或变更 / 迁移脚本
+- 🔐 认证、授权、安全相关代码
+- 🔗 跨模块 / 跨系统改动 / 多服务集成
+- 📁 多文件大范围改动（≥5 个文件）
+- ⚡ 不可逆操作（数据库迁移、数据删除、API 签名变更）
+- 🎨 用户需求含主观描述词（"简单""好看""智能""自然""Apple-like"）
 
-**这是硬性要求，不是建议。调用方式：`Skill("unknowns-discovery", "standard")`**
+**执行流程：**
+1. 阅读 `.agents/skills/unknowns-discovery/SKILL.md`
+2. 按模板生成 Unknowns Report（确认事实 → 暴露未知 → 排名 → 决策）
+3. 需要用户决策的 → AskUserQuestion（选项式）
+4. 确认后 → 更新计划文件 → 开始实现
 
-**只有以下情况可以跳过：**
-- 单行修复（typo、注释修正）
-- 单文件简单 bug fix（已有明确根因）
-- 纯代码解释类问题
+**可以跳过的唯一情况：**
+- 单行修复（typo、注释、格式）
+- 单文件简单 bug fix（root cause 已确认）
+- 纯代码解释 / 研究
+
+**如果你忘了做 Unknowns Discovery 直接开始写代码，这是在犯错。**
 
 ---
 
@@ -102,7 +108,7 @@ Follow these rules:
 7. After implementation, explain what changed, what remains uncertain, and what evidence verifies the result.
 8. Convert recurring discoveries into tests, documentation, conventions, or reusable project knowledge.
 
-For substantial features, architecture changes, ambiguous product work, migrations, or cross-module changes, run the **Unknowns Discovery** skill before implementation.
+For substantial features, architecture changes, ambiguous product work, migrations, or cross-module changes, run the Unknowns Discovery process before implementation. The complete methodology is documented at `.agents/skills/unknowns-discovery/SKILL.md`.
 
 
 # 要求

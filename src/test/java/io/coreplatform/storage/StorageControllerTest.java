@@ -3,6 +3,7 @@ package io.coreplatform.storage.api.controller;
 import io.coreplatform.storage.application.domain.StorageFile;
 import io.coreplatform.storage.application.domain.StorageMetadata;
 import io.coreplatform.storage.application.port.StorageDriver;
+import io.coreplatform.storage.application.service.StorageImageService;
 import io.coreplatform.storage.application.service.StorageMetadataService;
 import io.coreplatform.storage.application.service.StorageResourceService;
 import io.coreplatform.storage.application.service.StorageService;
@@ -99,10 +100,16 @@ class StorageControllerTest {
         }
 
         @Bean
+        StorageImageService storageImageService() {
+            return mock(StorageImageService.class);
+        }
+
+        @Bean
         StorageService storageService(StorageFileRepository repo, StorageDriver driver,
                                        StorageProperties props, StorageMetadataService metadataService,
-                                       StorageResourceService resourceService) {
-            return new StorageService(repo, driver, props, metadataService, resourceService);
+                                       StorageResourceService resourceService,
+                                       StorageImageService imageService) {
+            return new StorageService(repo, driver, props, metadataService, resourceService, imageService);
         }
 
         @Bean

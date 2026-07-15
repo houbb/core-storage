@@ -35,15 +35,18 @@ public class StorageService {
     private final StorageProperties properties;
     private final StorageMetadataService metadataService;
     private final StorageResourceService resourceService;
+    private final StorageImageService imageService;
 
     public StorageService(StorageFileRepository repository, StorageDriver driver,
                            StorageProperties properties, StorageMetadataService metadataService,
-                           StorageResourceService resourceService) {
+                           StorageResourceService resourceService,
+                           StorageImageService imageService) {
         this.repository = repository;
         this.driver = driver;
         this.properties = properties;
         this.metadataService = metadataService;
         this.resourceService = resourceService;
+        this.imageService = imageService;
     }
 
     /**
@@ -185,6 +188,12 @@ public class StorageService {
                         tagListSafe, propsSafe);
                 resourceService.updateStatus(uuid, "READY");
                 log.info("P2 Resource created: metadataUuid={}, type={}", uuid, inferredType);
+
+                // 4c. P4：如果是 IMAGE 类型，自动触发 Image Runtime
+                if (ResourceType.IMAGE.name().equals(inferredType)) {
+                    imageService.processUploadedImage(uuid, saved, tempFile);
+                    log.info("P4 Image Runtime triggered: metadataUuid={}", uuid);
+                }
             }
 
             // 5. 可选：上传时自动创建初始引用

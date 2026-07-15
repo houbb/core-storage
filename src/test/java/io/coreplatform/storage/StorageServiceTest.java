@@ -27,6 +27,8 @@ class StorageServiceTest {
     private StorageMetadataService metadataService;
     private StorageResourceService resourceService;
 
+    private StorageImageService imageService;
+
     @TempDir
     Path tempDir;
 
@@ -37,13 +39,15 @@ class StorageServiceTest {
         local.setRoot(tempDir.toString());
         local.setDatePath(false);
         properties.setLocal(local);
+        properties.setImage(new StorageProperties.Image());
 
         driver = mock(StorageDriver.class);
         repository = mock(StorageFileRepository.class);
         metadataService = mock(StorageMetadataService.class);
         resourceService = mock(StorageResourceService.class);
+        imageService = mock(StorageImageService.class);
 
-        service = new StorageService(repository, driver, properties, metadataService, resourceService);
+        service = new StorageService(repository, driver, properties, metadataService, resourceService, imageService);
     }
 
     @Test

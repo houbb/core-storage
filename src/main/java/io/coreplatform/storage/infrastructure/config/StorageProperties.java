@@ -11,6 +11,8 @@ public class StorageProperties {
 
     private Local local = new Local();
 
+    private Image image = new Image();
+
     public String getDriver() {
         return driver;
     }
@@ -25,6 +27,14 @@ public class StorageProperties {
 
     public void setLocal(Local local) {
         this.local = local;
+    }
+
+    public Image getImage() {
+        return image;
+    }
+
+    public void setImage(Image image) {
+        this.image = image;
     }
 
     public static class Local {
@@ -45,6 +55,19 @@ public class StorageProperties {
 
         public void setDatePath(boolean datePath) {
             this.datePath = datePath;
+        }
+    }
+
+    public static class Image {
+        /** 图片最大尺寸限制（宽或高的像素值），超过此值拒绝处理 */
+        private int maxDimension = 10000;
+
+        public int getMaxDimension() {
+            return maxDimension;
+        }
+
+        public void setMaxDimension(int maxDimension) {
+            this.maxDimension = maxDimension;
         }
     }
 }

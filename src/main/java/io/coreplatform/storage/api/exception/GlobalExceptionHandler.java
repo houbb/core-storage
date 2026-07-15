@@ -2,9 +2,11 @@ package io.coreplatform.storage.api.exception;
 
 import io.coreplatform.storage.application.service.StorageAccessService;
 import io.coreplatform.storage.application.service.StorageAccessService.AccessDeniedException;
+import io.coreplatform.storage.application.service.StorageImageService;
 import io.coreplatform.storage.application.service.StorageMetadataService;
 import io.coreplatform.storage.application.service.StorageResourceService;
 import io.coreplatform.storage.application.service.StorageService;
+import io.coreplatform.storage.application.service.ImagePipeline;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -69,6 +71,41 @@ public class GlobalExceptionHandler {
         pd.setTitle("Resource not found");
         pd.setType(URI.create("https://core-platform.dev/problems/resource-not-found"));
         pd.setProperty("errorCode", "STORAGE_RESOURCE_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageImageService.ImageNotFoundException.class)
+    public ProblemDetail handleImageNotFound(StorageImageService.ImageNotFoundException ex) {
+        log.warn("Image not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Image not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/image-not-found"));
+        pd.setProperty("errorCode", "STORAGE_IMAGE_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageImageService.VariantNotFoundException.class)
+    public ProblemDetail handleVariantNotFound(StorageImageService.VariantNotFoundException ex) {
+        log.warn("Variant not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Variant not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/variant-not-found"));
+        pd.setProperty("errorCode", "STORAGE_VARIANT_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(ImagePipeline.ImageTooLargeException.class)
+    public ProblemDetail handleImageTooLarge(ImagePipeline.ImageTooLargeException ex) {
+        log.warn("Image too large: {}x{}, max={}", ex.getWidth(), ex.getHeight(), ex.getMaxDimension());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.PAYLOAD_TOO_LARGE,
+                "Image dimension " + ex.getWidth() + "x" + ex.getHeight()
+                        + " exceeds maximum " + ex.getMaxDimension());
+        pd.setTitle("Image too large");
+        pd.setType(URI.create("https://core-platform.dev/problems/image-too-large"));
+        pd.setProperty("errorCode", "STORAGE_IMAGE_TOO_LARGE");
+        pd.setProperty("width", ex.getWidth());
+        pd.setProperty("height", ex.getHeight());
+        pd.setProperty("maxDimension", ex.getMaxDimension());
         return pd;
     }
 

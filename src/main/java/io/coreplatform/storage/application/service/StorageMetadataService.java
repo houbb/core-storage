@@ -25,13 +25,16 @@ public class StorageMetadataService {
     private final StorageMetadataRepository metadataRepo;
     private final StorageReferenceRepository referenceRepo;
     private final StorageMetadataIndexRepository indexRepo;
+    private final StorageResourceService resourceService;
 
     public StorageMetadataService(StorageMetadataRepository metadataRepo,
                                    StorageReferenceRepository referenceRepo,
-                                   StorageMetadataIndexRepository indexRepo) {
+                                   StorageMetadataIndexRepository indexRepo,
+                                   StorageResourceService resourceService) {
         this.metadataRepo = metadataRepo;
         this.referenceRepo = referenceRepo;
         this.indexRepo = indexRepo;
+        this.resourceService = resourceService;
     }
 
     /**
@@ -122,6 +125,8 @@ public class StorageMetadataService {
         if (totalRefs == 1 && "ACTIVE".equals(metadata.getStatus())) {
             metadataRepo.updateStatus(metadataUuid, "REFERENCED");
             indexRepo.updateStatus(metadataUuid, "REFERENCED");
+            // P2: 同步 Resource 状态
+            resourceService.updateStatus(metadataUuid, "REFERENCED");
             log.info("Status transition: ACTIVE -> REFERENCED, uuid={}", metadataUuid);
         }
 
@@ -157,6 +162,8 @@ public class StorageMetadataService {
         if (remaining == 0) {
             metadataRepo.updateStatus(metadataUuid, "UNREFERENCED");
             indexRepo.updateStatus(metadataUuid, "UNREFERENCED");
+            // P2: 同步 Resource 状态
+            resourceService.updateStatus(metadataUuid, "UNREFERENCED");
             log.info("Status transition: -> UNREFERENCED, uuid={}", metadataUuid);
         }
     }
@@ -171,19 +178,24 @@ public class StorageMetadataService {
 
     /**
      * 软删除 metadata。
+     * P2: 同步更新 Resource 状态。
      */
     public void softDelete(String uuid) {
         metadataRepo.softDelete(uuid);
         indexRepo.updateStatus(uuid, "SOFT_DELETED");
+        // P2: 同步 Resource 状态
+        resourceService.updateStatus(uuid, "DELETED");
         log.info("Metadata soft-deleted: uuid={}", uuid);
     }
 
     /**
-     * 更新状态（带索引同步）。
+     * 更新状态（带索引同步 + Resource 同步）。
      */
     public void updateStatus(String uuid, String status) {
         metadataRepo.updateStatus(uuid, status);
         indexRepo.updateStatus(uuid, status);
+        // P2: 同步 Resource 状态
+        resourceService.updateStatus(uuid, status);
     }
 
     // ---- private helpers ----

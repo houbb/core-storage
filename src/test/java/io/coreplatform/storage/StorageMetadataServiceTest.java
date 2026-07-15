@@ -18,19 +18,25 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 class StorageMetadataServiceTest {
 
     private StorageMetadataService metadataService;
     private StorageMetadataRepository metadataRepo;
     private StorageReferenceRepository referenceRepo;
     private StorageMetadataIndexRepository indexRepo;
+    private StorageResourceService resourceService;
 
     @BeforeEach
     void setUp() {
         metadataRepo = mock(StorageMetadataRepository.class);
         referenceRepo = mock(StorageReferenceRepository.class);
         indexRepo = mock(StorageMetadataIndexRepository.class);
-        metadataService = new StorageMetadataService(metadataRepo, referenceRepo, indexRepo);
+        resourceService = mock(StorageResourceService.class);
+        metadataService = new StorageMetadataService(metadataRepo, referenceRepo, indexRepo, resourceService);
     }
 
     // ---- UUID 查询 ----

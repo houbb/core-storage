@@ -3,6 +3,7 @@ package io.coreplatform.storage.application.service;
 import io.coreplatform.storage.api.response.StorageFileResponse;
 import io.coreplatform.storage.application.domain.StorageFile;
 import io.coreplatform.storage.application.domain.StorageMetadata;
+import io.coreplatform.storage.application.domain.enums.ResourceType;
 import io.coreplatform.storage.application.port.StorageDriver;
 import io.coreplatform.storage.infrastructure.config.StorageProperties;
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageFileRepository;
@@ -21,8 +22,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.time.LocalDate;
+import java.util.*;
 import java.util.HexFormat;
-import java.util.UUID;
 
 @Service
 public class StorageService {
@@ -33,18 +34,22 @@ public class StorageService {
     private final StorageDriver driver;
     private final StorageProperties properties;
     private final StorageMetadataService metadataService;
+    private final StorageResourceService resourceService;
 
     public StorageService(StorageFileRepository repository, StorageDriver driver,
-                           StorageProperties properties, StorageMetadataService metadataService) {
+                           StorageProperties properties, StorageMetadataService metadataService,
+                           StorageResourceService resourceService) {
         this.repository = repository;
         this.driver = driver;
         this.properties = properties;
         this.metadataService = metadataService;
+        this.resourceService = resourceService;
     }
 
     /**
      * 上传文件 — 元数据先入库，再通过 Driver 写磁盘。
      * P1：同步双写 storage_metadata + storage_metadata_index。
+     * P2：当传入 resourceType 时自动创建 StorageResource。
      * 可选自动创建引用。
      * 任何一步失败自动回滚。
      */
@@ -54,6 +59,36 @@ public class StorageService {
                                         String system, String module,
                                         String businessType, String businessId,
                                         String tags, String remark) throws IOException {
+        return uploadInternal(multipartFile, ownerType, ownerId, system, module,
+                businessType, businessId, tags, remark,
+                null, null, null, null, null, null);
+    }
+
+    /**
+     * P2：资源感知上传 — 携带 resourceType/category/description/visibility/tagList/props。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public StorageFileResponse uploadResource(MultipartFile multipartFile,
+                                               String ownerType, String ownerId,
+                                               String system, String module,
+                                               String businessType, String businessId,
+                                               String tags, String remark,
+                                               String resourceType, String category,
+                                               String description, String visibility,
+                                               List<String> tagList, Map<String, String> props) throws IOException {
+        return uploadInternal(multipartFile, ownerType, ownerId, system, module,
+                businessType, businessId, tags, remark,
+                resourceType, category, description, visibility, tagList, props);
+    }
+
+    private StorageFileResponse uploadInternal(MultipartFile multipartFile,
+                                                String ownerType, String ownerId,
+                                                String system, String module,
+                                                String businessType, String businessId,
+                                                String tags, String remark,
+                                                String resourceType, String category,
+                                                String description, String visibility,
+                                                List<String> tagList, Map<String, String> props) throws IOException {
         String originalName = multipartFile.getOriginalFilename();
         String extension = extractExtension(originalName);
         String mimeType = multipartFile.getContentType();
@@ -120,6 +155,34 @@ public class StorageService {
             metadataService.saveIndex(uuid, ownerType, ownerId, mimeType, module, tags, "ACTIVE");
             metadataService.updateStatus(uuid, "ACTIVE");
             log.info("P1 Metadata saved: uuid={}, status=ACTIVE", uuid);
+
+            // 4b. P2：如果带了 resourceType 参数，自动创建 StorageResource
+            if (resourceType != null && !resourceType.isBlank()) {
+                // 如果未填 resourceType 或为空，按 MIME 自动推断
+                String inferredType = resourceType;
+                if ("AUTO".equalsIgnoreCase(inferredType) || inferredType.isBlank()) {
+                    inferredType = ResourceType.fromMimeType(mimeType).name();
+                }
+                String resourceName = originalName != null ? originalName : "unnamed";
+                List<String> tagListSafe = tagList != null ? tagList : new ArrayList<>();
+                Map<String, String> propsSafe = props != null ? props : new HashMap<>();
+
+                // 将逗号分隔的 tags 也合并到 tagList
+                if (tags != null && !tags.isBlank()) {
+                    for (String t : tags.split(",")) {
+                        String trimmed = t.trim();
+                        if (!trimmed.isEmpty() && !tagListSafe.contains(trimmed)) {
+                            tagListSafe.add(trimmed);
+                        }
+                    }
+                }
+
+                resourceService.createResource(uuid, resourceName, inferredType,
+                        category, description, ownerType, ownerId, visibility,
+                        tagListSafe, propsSafe);
+                resourceService.updateStatus(uuid, "READY");
+                log.info("P2 Resource created: metadataUuid={}, type={}", uuid, inferredType);
+            }
 
             // 5. 可选：上传时自动创建初始引用
             if (system != null && !system.isBlank()

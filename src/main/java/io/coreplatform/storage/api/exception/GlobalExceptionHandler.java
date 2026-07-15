@@ -1,6 +1,7 @@
 package io.coreplatform.storage.api.exception;
 
 import io.coreplatform.storage.application.service.StorageMetadataService;
+import io.coreplatform.storage.application.service.StorageResourceService;
 import io.coreplatform.storage.application.service.StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +45,16 @@ public class GlobalExceptionHandler {
         pd.setTitle("Reference not found");
         pd.setType(URI.create("https://core-platform.dev/problems/reference-not-found"));
         pd.setProperty("errorCode", "STORAGE_REFERENCE_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageResourceService.ResourceNotFoundException.class)
+    public ProblemDetail handleResourceNotFound(StorageResourceService.ResourceNotFoundException ex) {
+        log.warn("Resource not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Resource not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/resource-not-found"));
+        pd.setProperty("errorCode", "STORAGE_RESOURCE_NOT_FOUND");
         return pd;
     }
 

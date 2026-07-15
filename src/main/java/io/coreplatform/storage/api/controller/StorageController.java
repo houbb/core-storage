@@ -17,6 +17,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/storage")
@@ -42,6 +44,28 @@ public class StorageController {
                                        @RequestParam(required = false) String remark) throws IOException {
         return service.upload(file, ownerType, ownerId, system, module,
                 businessType, businessId, tags, remark);
+    }
+
+    @PostMapping("/resources/upload")
+    @Operation(summary = "上传文件并创建资源（P2 Resource Runtime）")
+    public StorageFileResponse uploadResource(@RequestParam("file") MultipartFile file,
+                                               @RequestParam(required = false) String ownerType,
+                                               @RequestParam(required = false) String ownerId,
+                                               @RequestParam(required = false) String system,
+                                               @RequestParam(required = false) String module,
+                                               @RequestParam(required = false) String businessType,
+                                               @RequestParam(required = false) String businessId,
+                                               @RequestParam(required = false) String tags,
+                                               @RequestParam(required = false) String remark,
+                                               @RequestParam(required = false) String resourceType,
+                                               @RequestParam(required = false) String category,
+                                               @RequestParam(required = false) String description,
+                                               @RequestParam(required = false) String visibility,
+                                               @RequestParam(required = false) List<String> tagList,
+                                               @RequestParam(required = false) Map<String, String> props) throws IOException {
+        return service.uploadResource(file, ownerType, ownerId, system, module,
+                businessType, businessId, tags, remark,
+                resourceType, category, description, visibility, tagList, props);
     }
 
     @GetMapping("/file/{id}")

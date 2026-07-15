@@ -25,6 +25,7 @@ class StorageServiceTest {
     private StorageDriver driver;
     private StorageProperties properties;
     private StorageMetadataService metadataService;
+    private StorageResourceService resourceService;
 
     @TempDir
     Path tempDir;
@@ -40,8 +41,9 @@ class StorageServiceTest {
         driver = mock(StorageDriver.class);
         repository = mock(StorageFileRepository.class);
         metadataService = mock(StorageMetadataService.class);
+        resourceService = mock(StorageResourceService.class);
 
-        service = new StorageService(repository, driver, properties, metadataService);
+        service = new StorageService(repository, driver, properties, metadataService, resourceService);
     }
 
     @Test

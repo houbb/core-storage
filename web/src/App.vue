@@ -2,8 +2,9 @@
 import { ref } from 'vue'
 import StoragePage from './pages/StoragePage.vue'
 import MetadataPage from './pages/MetadataPage.vue'
+import ResourcePage from './pages/ResourcePage.vue'
 
-const activeTab = ref<'upload' | 'metadata'>('upload')
+const activeTab = ref<'upload' | 'metadata' | 'resource'>('upload')
 </script>
 
 <template>
@@ -22,10 +23,18 @@ const activeTab = ref<'upload' | 'metadata'>('upload')
     >
       📋 元数据
     </button>
+    <button
+      class="tab-btn"
+      :class="{ active: activeTab === 'resource' }"
+      @click="activeTab = 'resource'"
+    >
+      🧩 资源中心
+    </button>
   </div>
 
   <StoragePage v-if="activeTab === 'upload'" />
-  <MetadataPage v-else />
+  <MetadataPage v-else-if="activeTab === 'metadata'" />
+  <ResourcePage v-else />
 </template>
 
 <style scoped>

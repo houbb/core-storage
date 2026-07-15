@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## [0.3.0] — 2026-07-15
+
+### Added — P2 Resource Runtime
+
+- **统一资源模型** — 新增 `StorageResource` 聚合根 + 4 枚举（ResourceType/Category/Visibility/Status），文件升级为平台资源；新增 `storage_resource`/`storage_resource_tag`/`storage_resource_property` 三张表
+- **5 态生命周期** — UPLOADING→READY→REFERENCED→DELETED，与 Metadata 状态双向自动同步
+- **REST API** — 7 个端点：资源上传 `POST /resources/upload`、详情 `GET /{uuid}`、搜索 `GET /search`、更新 `PUT /{uuid}`、删除 `DELETE /{uuid}`、属性读写
+- **上传整合** — 原上传接口向后兼容；传入 `resourceType` 自动创建 Resource，未填按 MIME 推断
+- **前端** — 新增「🧩 资源中心」Tab，左侧分类导航 + 表格/卡片双视图 + 详情抽屉
+- **测试** — 49 个用例全部通过（+20 个 P2 用例：Service 14 + Controller 6）
+
+---
+
 ## [0.2.0] — 2026-07-15
 
 ### Added — P1 Metadata Runtime

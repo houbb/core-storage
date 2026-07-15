@@ -4,6 +4,7 @@ import io.coreplatform.storage.application.domain.StorageFile;
 import io.coreplatform.storage.application.domain.StorageMetadata;
 import io.coreplatform.storage.application.port.StorageDriver;
 import io.coreplatform.storage.application.service.StorageMetadataService;
+import io.coreplatform.storage.application.service.StorageResourceService;
 import io.coreplatform.storage.application.service.StorageService;
 import io.coreplatform.storage.infrastructure.config.StorageProperties;
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageFileRepository;
@@ -87,14 +88,21 @@ class StorageControllerTest {
         @Bean
         StorageMetadataService storageMetadataService(StorageMetadataRepository metadataRepo,
                                                          StorageReferenceRepository referenceRepo,
-                                                         StorageMetadataIndexRepository indexRepo) {
-            return new StorageMetadataService(metadataRepo, referenceRepo, indexRepo);
+                                                         StorageMetadataIndexRepository indexRepo,
+                                                         StorageResourceService resourceService) {
+            return new StorageMetadataService(metadataRepo, referenceRepo, indexRepo, resourceService);
+        }
+
+        @Bean
+        StorageResourceService storageResourceService() {
+            return mock(StorageResourceService.class);
         }
 
         @Bean
         StorageService storageService(StorageFileRepository repo, StorageDriver driver,
-                                       StorageProperties props, StorageMetadataService metadataService) {
-            return new StorageService(repo, driver, props, metadataService);
+                                       StorageProperties props, StorageMetadataService metadataService,
+                                       StorageResourceService resourceService) {
+            return new StorageService(repo, driver, props, metadataService, resourceService);
         }
 
         @Bean

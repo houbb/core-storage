@@ -18,6 +18,7 @@ public class StorageResourceResponse {
     private String ownerType;
     private String ownerId;
     private String visibility;
+    private String accessMode;
     private String status;
     private List<String> tags;
     private List<PropertyItem> properties;
@@ -72,6 +73,9 @@ public class StorageResourceResponse {
 
     public String getVisibility() { return visibility; }
     public void setVisibility(String visibility) { this.visibility = visibility; }
+
+    public String getAccessMode() { return accessMode; }
+    public void setAccessMode(String accessMode) { this.accessMode = accessMode; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

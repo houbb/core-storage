@@ -1,17 +1,13 @@
 package io.coreplatform.storage.application.domain;
 
-import io.coreplatform.storage.application.domain.enums.ResourceCategory;
-import io.coreplatform.storage.application.domain.enums.ResourceStatus;
-import io.coreplatform.storage.application.domain.enums.ResourceType;
-import io.coreplatform.storage.application.domain.enums.Visibility;
+import io.coreplatform.storage.application.domain.enums.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 统一资源领域对象 — 整个平台的资源入口。
- * 关系：StorageResource → StorageMetadata → StorageDriver → Binary
+ * 资源领域对象 — 对应 storage_resource 表。
  */
 public class StorageResource {
 
@@ -25,42 +21,15 @@ public class StorageResource {
     private String ownerType;
     private String ownerId;
     private Visibility visibility;
+    private AccessMode accessMode;
     private ResourceStatus status;
+    private List<String> tags;
+    private List<Property> properties;
+    private int referenceCount;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private String createUser;
     private String updateUser;
-
-    /** 关联标签列表 */
-    private List<String> tags = new ArrayList<>();
-
-    /** 关联属性列表 */
-    private List<ResourceProperty> properties = new ArrayList<>();
-
-    /** 引用计数（非持久化，查询填充） */
-    private int referenceCount;
-
-    public StorageResource() {
-    }
-
-    /** 资源是否可被正常访问 */
-    public boolean isAccessible() {
-        return status == ResourceStatus.READY || status == ResourceStatus.REFERENCED;
-    }
-
-    /** 软删除 */
-    public void markDeleted() {
-        this.status = ResourceStatus.DELETED;
-        this.updateTime = LocalDateTime.now();
-    }
-
-    /** 状态迁移 */
-    public void transitionTo(ResourceStatus newStatus) {
-        this.status = newStatus;
-        this.updateTime = LocalDateTime.now();
-    }
-
-    // ---- getters & setters ----
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -92,8 +61,20 @@ public class StorageResource {
     public Visibility getVisibility() { return visibility; }
     public void setVisibility(Visibility visibility) { this.visibility = visibility; }
 
+    public AccessMode getAccessMode() { return accessMode; }
+    public void setAccessMode(AccessMode accessMode) { this.accessMode = accessMode; }
+
     public ResourceStatus getStatus() { return status; }
     public void setStatus(ResourceStatus status) { this.status = status; }
+
+    public List<String> getTags() { return tags != null ? tags : (tags = new ArrayList<>()); }
+    public void setTags(List<String> tags) { this.tags = tags; }
+
+    public List<Property> getProperties() { return properties != null ? properties : (properties = new ArrayList<>()); }
+    public void setProperties(List<Property> properties) { this.properties = properties; }
+
+    public int getReferenceCount() { return referenceCount; }
+    public void setReferenceCount(int referenceCount) { this.referenceCount = referenceCount; }
 
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
@@ -107,27 +88,20 @@ public class StorageResource {
     public String getUpdateUser() { return updateUser; }
     public void setUpdateUser(String updateUser) { this.updateUser = updateUser; }
 
-    public List<String> getTags() { return tags; }
-    public void setTags(List<String> tags) { this.tags = tags; }
-
-    public List<ResourceProperty> getProperties() { return properties; }
-    public void setProperties(List<ResourceProperty> properties) { this.properties = properties; }
-
-    public int getReferenceCount() { return referenceCount; }
-    public void setReferenceCount(int referenceCount) { this.referenceCount = referenceCount; }
-
-    /**
-     * 资源扩展属性。
-     */
-    public static class ResourceProperty {
+    public static class Property {
         private String key;
         private String value;
 
-        public ResourceProperty() {}
-        public ResourceProperty(String key, String value) { this.key = key; this.value = value; }
+        public Property() {}
+
+        public Property(String key, String value) {
+            this.key = key;
+            this.value = value;
+        }
 
         public String getKey() { return key; }
         public void setKey(String key) { this.key = key; }
+
         public String getValue() { return value; }
         public void setValue(String value) { this.value = value; }
     }

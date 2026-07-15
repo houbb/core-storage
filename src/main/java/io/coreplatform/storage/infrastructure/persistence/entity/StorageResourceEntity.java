@@ -18,6 +18,7 @@ public class StorageResourceEntity {
     private String ownerId;
     private String visibility;
     private String status;
+    private String accessMode;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private String createUser;
@@ -58,6 +59,9 @@ public class StorageResourceEntity {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getAccessMode() { return accessMode; }
+    public void setAccessMode(String accessMode) { this.accessMode = accessMode; }
 
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }

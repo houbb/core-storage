@@ -3,7 +3,8 @@ package io.coreplatform.storage.application.service;
 import io.coreplatform.storage.api.response.SearchResultResponse;
 import io.coreplatform.storage.api.response.StorageResourceResponse;
 import io.coreplatform.storage.application.domain.StorageResource;
-import io.coreplatform.storage.application.domain.StorageResource.ResourceProperty;
+import io.coreplatform.storage.application.domain.StorageResource.Property;
+import io.coreplatform.storage.application.domain.enums.AccessMode;
 import io.coreplatform.storage.application.domain.enums.ResourceCategory;
 import io.coreplatform.storage.application.domain.enums.ResourceStatus;
 import io.coreplatform.storage.application.domain.enums.ResourceType;
@@ -52,6 +53,7 @@ public class StorageResourceService {
                                            String ownerType,
                                            String ownerId,
                                            String visibility,
+                                           String accessMode,
                                            List<String> tags,
                                            Map<String, String> properties) {
         StorageResource resource = new StorageResource();
@@ -64,6 +66,7 @@ public class StorageResourceService {
         resource.setOwnerType(ownerType);
         resource.setOwnerId(ownerId);
         resource.setVisibility(safeEnum(Visibility.class, visibility, Visibility.PUBLIC));
+        resource.setAccessMode(safeEnum(AccessMode.class, accessMode, AccessMode.PUBLIC));
         resource.setStatus(ResourceStatus.UPLOADING);
 
         StorageResource saved = resourceRepo.save(resource);
@@ -123,7 +126,7 @@ public class StorageResourceService {
     }
 
     /**
-     * 更新资源信息（名称/描述/分类/可见性/标签）。
+     * 更新资源信息（名称/描述/分类/可见性/访问模式/标签）。
      */
     @Transactional(rollbackFor = Exception.class)
     public StorageResourceResponse update(String resourceUuid,
@@ -131,6 +134,7 @@ public class StorageResourceService {
                                             String description,
                                             String category,
                                             String visibility,
+                                            String accessMode,
                                             List<String> tags) {
         StorageResource r = resourceRepo.findByResourceUuid(resourceUuid)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found: uuid=" + resourceUuid));
@@ -140,6 +144,7 @@ public class StorageResourceService {
                 description != null ? description : r.getDescription(),
                 category != null ? category : (r.getCategory() != null ? r.getCategory().name() : "OTHER"),
                 visibility != null ? visibility : (r.getVisibility() != null ? r.getVisibility().name() : "PUBLIC"),
+                accessMode != null ? accessMode : (r.getAccessMode() != null ? r.getAccessMode().name() : "PUBLIC"),
                 tags);
 
         if (tags != null) {
@@ -212,6 +217,7 @@ public class StorageResourceService {
         resp.setOwnerType(r.getOwnerType());
         resp.setOwnerId(r.getOwnerId());
         resp.setVisibility(r.getVisibility() != null ? r.getVisibility().name() : null);
+        resp.setAccessMode(r.getAccessMode() != null ? r.getAccessMode().name() : "PUBLIC");
         resp.setStatus(r.getStatus() != null ? r.getStatus().name() : null);
         resp.setTags(r.getTags());
         resp.setProperties(r.getProperties().stream()
@@ -224,9 +230,9 @@ public class StorageResourceService {
         return resp;
     }
 
-    private List<ResourceProperty> loadProperties(String resourceUuid) {
+    private List<Property> loadProperties(String resourceUuid) {
         return propertyRepo.findByResourceUuid(resourceUuid).stream()
-                .map(p -> new ResourceProperty(p.getPropKey(), p.getPropValue()))
+                .map(p -> new Property(p.getPropKey(), p.getPropValue()))
                 .toList();
     }
 

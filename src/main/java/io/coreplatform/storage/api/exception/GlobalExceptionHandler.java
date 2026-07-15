@@ -1,5 +1,7 @@
 package io.coreplatform.storage.api.exception;
 
+import io.coreplatform.storage.application.service.StorageAccessService;
+import io.coreplatform.storage.application.service.StorageAccessService.AccessDeniedException;
 import io.coreplatform.storage.application.service.StorageMetadataService;
 import io.coreplatform.storage.application.service.StorageResourceService;
 import io.coreplatform.storage.application.service.StorageService;
@@ -45,6 +47,18 @@ public class GlobalExceptionHandler {
         pd.setTitle("Reference not found");
         pd.setType(URI.create("https://core-platform.dev/problems/reference-not-found"));
         pd.setProperty("errorCode", "STORAGE_REFERENCE_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
+        log.warn("Access denied: mode={}, operation={}", ex.getMode(), ex.getOperation());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        pd.setTitle("Access denied");
+        pd.setType(URI.create("https://core-platform.dev/problems/access-denied"));
+        pd.setProperty("errorCode", "STORAGE_ACCESS_DENIED");
+        pd.setProperty("accessMode", ex.getMode().name());
+        pd.setProperty("operation", ex.getOperation());
         return pd;
     }
 

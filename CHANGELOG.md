@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## [0.4.0] — 2026-07-15
+
+### Added — P3 Unified Access Runtime
+
+- **统一访问入口** — `StorageAccessService` 接管 download/preview/signed-url，所有资源访问必须经过 Access Runtime，禁止绕过直接访问 Storage Driver
+- **AccessMode（7 种）** — PUBLIC / LOGIN / OWNER / ROLE / TOKEN / SIGNED_URL / SYSTEM，与 Visibility（展示标签）解耦
+- **访问策略** — `storage_access_policy` 表，多行策略（不同 role 不同权限），GET/PUT 策略 API
+- **分享** — `storage_resource_share` 表，token 分享链接（24h/7d/永久），支持列举、撤销、过期清理
+- **签名 URL** — HMAC-SHA256 签名 + 过期校验
+- **访问日志** — `storage_access_log` 表，`@Async` 异步写入，记录 operator/ip/result/duration
+- **AccessContext** — `@RequestScope`，从 `X-User-Id`/`X-User-Roles`/`X-User-Type` header 读取身份
+- **REST API** — 10 个端点：download（shareToken/signed-url 双模式）、preview（inline）、share CRUD、signed-url、policy CRUD
+- **上传扩展** — `POST /resources/upload` + `PUT /{uuid}` 新增 `accessMode` 参数
+- **异常处理** — `AccessDeniedException` → HTTP 403 Problem Detail
+
+### Changed
+
+- `StorageResource` 持久化链路新增 `accessMode` 字段（Entity/Converter/Repository/Service）
+- `StorageResourceService.createResource()` + `update()` 签名变更（新增 accessMode 参数）
+- `StorageResource` 新增 `referenceCount` 字段（修复 P2 预存 bug）
+- `StorageAccessService` 捕获 `IOException`（修复编译错误）
+- Java 版本 21 → 17
+- 测试：49 个用例全部通过
+
+---
+
 ## [0.3.0] — 2026-07-15
 
 ### Added — P2 Resource Runtime

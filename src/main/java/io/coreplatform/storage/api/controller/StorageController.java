@@ -61,11 +61,12 @@ public class StorageController {
                                                @RequestParam(required = false) String category,
                                                @RequestParam(required = false) String description,
                                                @RequestParam(required = false) String visibility,
+                                               @RequestParam(required = false) String accessMode,
                                                @RequestParam(required = false) List<String> tagList,
                                                @RequestParam(required = false) Map<String, String> props) throws IOException {
         return service.uploadResource(file, ownerType, ownerId, system, module,
                 businessType, businessId, tags, remark,
-                resourceType, category, description, visibility, tagList, props);
+                resourceType, category, description, visibility, accessMode, tagList, props);
     }
 
     @GetMapping("/file/{id}")

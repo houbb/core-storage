@@ -53,7 +53,7 @@ public class StorageResourceController {
     public StorageResourceResponse updateResource(@PathVariable String uuid,
                                                     @RequestBody UpdateResourceRequest request) {
         return resourceService.update(uuid, request.resourceName, request.description,
-                request.category, request.visibility, request.tags);
+                request.category, request.visibility, request.accessMode, request.tags);
     }
 
     @DeleteMapping("/{uuid}")
@@ -84,6 +84,7 @@ public class StorageResourceController {
             String description,
             String category,
             String visibility,
+            String accessMode,
             List<String> tags) {
     }
 }

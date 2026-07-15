@@ -48,7 +48,7 @@ class StorageResourceServiceTest {
 
         StorageResource result = resourceService.createResource(
                 "md-uuid-001", "avatar.png", "IMAGE", "AVATAR", "用户头像",
-                "USER", "1001", "PUBLIC",
+                "USER", "1001", "PUBLIC", null,
                 List.of("dark", "round"), null);
 
         assertNotNull(result);
@@ -67,7 +67,7 @@ class StorageResourceServiceTest {
         when(resourceRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         StorageResource result = resourceService.createResource(
-                "md-uuid-002", "test.zip", null, null, "", null, null, null, null, null);
+                "md-uuid-002", "test.zip", null, null, "", null, null, null, null, null, null);
 
         assertEquals(ResourceType.OTHER, result.getResourceType());
         assertEquals(ResourceCategory.OTHER, result.getCategory());
@@ -83,7 +83,7 @@ class StorageResourceServiceTest {
         props.put("height", "768");
 
         resourceService.createResource("md-uuid-003", "banner.jpg", "IMAGE", "BANNER",
-                "", "SYSTEM", "sys-1", "PUBLIC", null, props);
+                "", "SYSTEM", "sys-1", "PUBLIC", null, null, props);
 
         verify(propertyRepo).setProperties(anyString(), eq(props));
     }
@@ -169,10 +169,10 @@ class StorageResourceServiceTest {
         when(referenceRepo.countByMetadataUuid("md-uuid-001")).thenReturn(2);
 
         StorageResourceResponse resp = resourceService.update("res-uuid-001",
-                "new.png", "updated desc", "LOGO", "LOGIN", List.of("new-tag"));
+                "new.png", "updated desc", "LOGO", "LOGIN", null, List.of("new-tag"));
 
         verify(resourceRepo).update(eq("res-uuid-001"), eq("new.png"), eq("updated desc"),
-                eq("LOGO"), eq("LOGIN"), eq(List.of("new-tag")));
+                eq("LOGO"), eq("LOGIN"), eq("PUBLIC"), eq(List.of("new-tag")));
         verify(tagRepo).replaceTags("res-uuid-001", List.of("new-tag"));
         assertEquals("RES-UUID-001", resp.getResourceUuid().toUpperCase());
     }

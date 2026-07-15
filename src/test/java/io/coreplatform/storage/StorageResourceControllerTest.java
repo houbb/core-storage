@@ -86,7 +86,7 @@ class StorageResourceControllerTest {
         resp.setVisibility("LOGIN");
 
         when(resourceService.update(eq("res-uuid-001"), eq("new-avatar.png"),
-                eq("new desc"), eq("LOGO"), eq("LOGIN"), anyList()))
+                eq("new desc"), eq("LOGO"), eq("LOGIN"), isNull(), anyList()))
                 .thenReturn(resp);
 
         String body = """

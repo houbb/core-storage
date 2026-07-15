@@ -1,6 +1,7 @@
 package io.coreplatform.storage.infrastructure.persistence.converter;
 
 import io.coreplatform.storage.application.domain.StorageResource;
+import io.coreplatform.storage.application.domain.enums.AccessMode;
 import io.coreplatform.storage.application.domain.enums.ResourceCategory;
 import io.coreplatform.storage.application.domain.enums.ResourceStatus;
 import io.coreplatform.storage.application.domain.enums.ResourceType;
@@ -28,6 +29,7 @@ public final class StorageResourceConverter {
         d.setOwnerType(e.getOwnerType());
         d.setOwnerId(e.getOwnerId());
         d.setVisibility(safeEnum(Visibility.class, e.getVisibility(), Visibility.PUBLIC));
+        d.setAccessMode(safeEnum(AccessMode.class, e.getAccessMode(), AccessMode.PUBLIC));
         d.setStatus(safeEnum(ResourceStatus.class, e.getStatus(), ResourceStatus.UPLOADING));
         d.setCreateTime(e.getCreateTime());
         d.setUpdateTime(e.getUpdateTime());
@@ -49,6 +51,7 @@ public final class StorageResourceConverter {
         e.setOwnerType(d.getOwnerType());
         e.setOwnerId(d.getOwnerId());
         e.setVisibility(d.getVisibility() != null ? d.getVisibility().name() : "PUBLIC");
+        e.setAccessMode(d.getAccessMode() != null ? d.getAccessMode().name() : "PUBLIC");
         e.setStatus(d.getStatus() != null ? d.getStatus().name() : "UPLOADING");
         e.setCreateTime(d.getCreateTime());
         e.setUpdateTime(d.getUpdateTime());

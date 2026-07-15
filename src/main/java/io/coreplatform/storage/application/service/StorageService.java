@@ -61,7 +61,7 @@ public class StorageService {
                                         String tags, String remark) throws IOException {
         return uploadInternal(multipartFile, ownerType, ownerId, system, module,
                 businessType, businessId, tags, remark,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
     }
 
     /**
@@ -75,10 +75,11 @@ public class StorageService {
                                                String tags, String remark,
                                                String resourceType, String category,
                                                String description, String visibility,
+                                               String accessMode,
                                                List<String> tagList, Map<String, String> props) throws IOException {
         return uploadInternal(multipartFile, ownerType, ownerId, system, module,
                 businessType, businessId, tags, remark,
-                resourceType, category, description, visibility, tagList, props);
+                resourceType, category, description, visibility, accessMode, tagList, props);
     }
 
     private StorageFileResponse uploadInternal(MultipartFile multipartFile,
@@ -88,6 +89,7 @@ public class StorageService {
                                                 String tags, String remark,
                                                 String resourceType, String category,
                                                 String description, String visibility,
+                                                String accessMode,
                                                 List<String> tagList, Map<String, String> props) throws IOException {
         String originalName = multipartFile.getOriginalFilename();
         String extension = extractExtension(originalName);
@@ -179,6 +181,7 @@ public class StorageService {
 
                 resourceService.createResource(uuid, resourceName, inferredType,
                         category, description, ownerType, ownerId, visibility,
+                        accessMode,
                         tagListSafe, propsSafe);
                 resourceService.updateStatus(uuid, "READY");
                 log.info("P2 Resource created: metadataUuid={}, type={}", uuid, inferredType);

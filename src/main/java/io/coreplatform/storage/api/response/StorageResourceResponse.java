@@ -10,7 +10,8 @@ public class StorageResourceResponse {
 
     private Long id;
     private String resourceUuid;
-    private String metadataUuid;
+    private String latestVersionUuid;
+    private int versionCount;
     private String resourceName;
     private String resourceType;
     private String category;

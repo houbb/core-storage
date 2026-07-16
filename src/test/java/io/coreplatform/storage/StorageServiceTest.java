@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import io.coreplatform.storage.api.response.StorageFileResponse;
 import io.coreplatform.storage.application.port.StorageDriver;
 import io.coreplatform.storage.application.domain.enums.DriverType;
+import io.coreplatform.storage.application.service.ReplicationService;
 import io.coreplatform.storage.application.service.StorageImageService;
 import io.coreplatform.storage.application.service.StorageMetadataService;
 import io.coreplatform.storage.application.service.StorageResourceService;
@@ -34,6 +35,7 @@ class StorageServiceTest {
     private StorageMetadataService metadataService;
     private StorageResourceService resourceService;
     private StorageImageService imageService;
+    private ReplicationService replicationService;
 
     @TempDir
     Path tempDir;
@@ -46,6 +48,7 @@ class StorageServiceTest {
         local.setDatePath(false);
         properties.setLocal(local);
         properties.setImage(new StorageProperties.Image());
+        properties.setReplication(new StorageProperties.Replication());
 
         driver = mock(StorageDriver.class);
         when(driver.type()).thenReturn(DriverType.LOCAL);
@@ -57,8 +60,9 @@ class StorageServiceTest {
         metadataService = mock(StorageMetadataService.class);
         resourceService = mock(StorageResourceService.class);
         imageService = mock(StorageImageService.class);
+        replicationService = mock(ReplicationService.class);
 
-        service = new StorageService(repository, driverFactory, properties, metadataService, resourceService, imageService);
+        service = new StorageService(repository, driverFactory, properties, metadataService, resourceService, imageService, replicationService);
     }
 
     @Test

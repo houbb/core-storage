@@ -15,6 +15,8 @@ public class StorageProperties {
 
     private Database database = new Database();
 
+    private Replication replication = new Replication();
+
     // ---- getters & setters ----
 
     public String getDriver() {
@@ -47,6 +49,14 @@ public class StorageProperties {
 
     public void setDatabase(Database database) {
         this.database = database;
+    }
+
+    public Replication getReplication() {
+        return replication;
+    }
+
+    public void setReplication(Replication replication) {
+        this.replication = replication;
     }
 
     public static class Local {
@@ -93,6 +103,41 @@ public class StorageProperties {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+    }
+
+    public static class Replication {
+        /** 调度器扫描间隔（毫秒），默认 5000 */
+        private long schedulerIntervalMs = 5000;
+
+        /** 每批最大处理任务数 */
+        private int maxBatchSize = 10;
+
+        /** 同步后是否校验 SHA-256 */
+        private boolean checksumVerify = true;
+
+        public long getSchedulerIntervalMs() {
+            return schedulerIntervalMs;
+        }
+
+        public void setSchedulerIntervalMs(long schedulerIntervalMs) {
+            this.schedulerIntervalMs = schedulerIntervalMs;
+        }
+
+        public int getMaxBatchSize() {
+            return maxBatchSize;
+        }
+
+        public void setMaxBatchSize(int maxBatchSize) {
+            this.maxBatchSize = maxBatchSize;
+        }
+
+        public boolean isChecksumVerify() {
+            return checksumVerify;
+        }
+
+        public void setChecksumVerify(boolean checksumVerify) {
+            this.checksumVerify = checksumVerify;
         }
     }
 }

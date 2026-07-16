@@ -1,5 +1,90 @@
 # CHANGELOG
 
+## [0.7.0] — 2026-07-16
+
+### Added — P6 Replication Runtime（数据复制与同步运行时）
+
+**核心概念：一个 Resource，可以存在多个地方。**
+
+- **StorageReplica 模型** — 一个 Resource 可拥有多个 Replica，每个 Replica 绑定 Profile + Driver，通过 Task + Scheduler 机制实现多副本同步。关系链：`Resource → Replica → Profile → Driver`
+- **ReplicaRole 枚举（5 种）** — PRIMARY / SECONDARY / BACKUP / ARCHIVE / CACHE，任何 Driver 都可以承担任意角色
+- **ReplicaStatus 枚举（6 态）** — CREATING → SYNCING → READY / FAILED / OFFLINE → DELETING
+- **SyncTask 模型** — `storage_sync_task` 表，所有同步/迁移/恢复/校验操作通过 Task 管理，避免引入 MQ（遵循 Core Platform 极简原则）
+- **SyncTaskType 枚举（4 种）** — SYNC / MIGRATE / RECOVER / VERIFY
+- **SyncTaskStatus 枚举（5 态）** — PENDING → RUNNING → COMPLETED / FAILED / CANCELLED
+- **SyncMode 枚举（3 种）** — SYNC / ASYNC / MANUAL
+- **ConsistencyLevel 枚举（2 种）** — STRONG / EVENTUAL（默认 EVENTUAL）
+- **ReplicationEngine** — 核心同步引擎：source driver download（stream）→ target driver upload（stream）→ SHA-256 校验 → 更新 replica 状态。同时支持 MIGRATE（角色切换）和 RECOVER（故障恢复）
+- **ReplicationService** — 副本 CRUD + 同步/迁移/恢复编排，提供完整的业务方法：
+  - `addReplica()` / `removeReplica()` — 副本管理，添加副本时自动创建 SYNC 任务
+  - `syncResource()` / `migrateResource()` / `recoverResource()` — 同步/迁移/恢复手动触发
+  - `replicateAfterUpload()` — 上传后自动为所有非 PRIMARY 副本创建异步同步任务
+- **SyncTaskScheduler** — `@Scheduled(fixedDelay)` 定时扫描 PENDING 任务，单线程执行（SQLite 友好），默认 5 秒间隔，批量处理（默认 10 个/批），失败任务记录错误信息不回滚
+- **上传自动触发同步** — `StorageService.uploadInternal()` 完成后自动调用 `ReplicationService.replicateAfterUpload()`，为所有非 PRIMARY 副本创建 SYNC 任务（零开销：无副本时方法直接返回）
+- **REST API — 副本管理**：
+  - `GET /api/v1/storage/resources/{uuid}/replicas` — 查看所有副本
+  - `POST /api/v1/storage/resources/{uuid}/replicas` — 添加副本（自动创建同步任务）
+  - `DELETE /api/v1/storage/resources/{uuid}/replicas/{id}` — 删除副本（禁止删除 PRIMARY）
+- **REST API — 操作触发**：
+  - `POST /api/v1/storage/resources/{uuid}/sync` — 手动触发同步
+  - `POST /api/v1/storage/resources/{uuid}/migrate` — 触发迁移（切换 PRIMARY）
+  - `POST /api/v1/storage/resources/{uuid}/recover` — 触发故障恢复（SECONDARY → PRIMARY）
+- **REST API — 任务管理**：
+  - `GET /api/v1/storage/tasks` — 任务列表（支持 resourceUuid / taskType / status 过滤 + 分页）
+  - `GET /api/v1/storage/tasks/{id}` — 任务详情（含进度和错误信息）
+  - `POST /api/v1/storage/tasks/{id}/pause` — 暂停 PENDING 任务
+  - `POST /api/v1/storage/tasks/{id}/resume` — 恢复 CANCELLED 任务
+- **配置项** — `core.storage.replication.scheduler-interval-ms`（默认 5000）、`core.storage.replication.max-batch-size`（默认 10）、`core.storage.replication.checksum-verify`（默认 true）
+- **异常处理** — 6 个 P6 专用异常处理器：ReplicaNotFoundException（404）、ReplicaAlreadyExistsException（409）、CannotDeletePrimaryReplicaException（400）、SyncTaskNotFoundException（404）、SyncTaskAlreadyRunningException（409）、InvalidReplicationTargetException（400）
+- **数据库迁移 V7** — 新增 2 张表：
+  - `storage_replica`（resource_uuid + profile_name + driver_name + replica_role + replica_status + version + checksum + sync_time）
+  - `storage_sync_task`（task_type + resource_uuid + source_profile + target_profile + status + progress + error_message）
+
+### Changed
+
+- `CoreStorageApplication` — 添加 `@EnableScheduling` 启用 Spring 定时任务
+- `StorageService` — 构造函数新增 `ReplicationService` 参数；`uploadInternal()` 在 P4 管线后新增 P6 自动同步调用
+- `StorageProperties` — 新增 `Replication` 内部类（schedulerIntervalMs / maxBatchSize / checksumVerify）
+- `StorageConfig` — `storageDriverFactory` bean 初始化时确保默认 profile 存在（解决 ApplicationRunner 执行前 bean 初始化依赖问题）；`storageDriver` bean 添加 `@Primary` 解决多 StorageDriver bean 注入冲突
+- `GlobalExceptionHandler` — 新增 6 个 P6 异常处理器
+
+### Test
+
+- 新增 3 个测试类，34 个测试用例，全部通过：
+  - `ReplicationServiceTest`（18 用例）— 副本 CRUD、同步/迁移/恢复任务创建、暂停/恢复、上传后自动触发、边界条件（主副本不可删除、重复副本检测、无健康副本时恢复失败）
+  - `ReplicationEngineTest`（6 用例）— 同步成功流程、checksum 不匹配失败、缺少源 checksum 跳过校验、迁移角色切换、校验匹配/不匹配
+  - `ReplicationControllerTest`（10 用例）— 所有 REST 端点的请求/响应验证
+
+### Key Design Decisions
+
+1. **Task + Scheduler，无 MQ** — 保持 Core Platform 极简架构，`storage_sync_task` 表 + `@Scheduled` 替代 MQ
+2. **Replica 是 Resource 级别** — 每个 Resource 独立配置副本拓扑（非 Profile 级别全局配置）
+3. **添加副本 = 自动创建同步任务** — API 添加副本即时创建 PENDING 任务，Scheduler 下一次扫描自动执行
+4. **SHA-256 流式校验** — 同步后计算目标文件 SHA-256 与源文件对比，不匹配则标记 FAILED
+5. **单线程 Scheduler** — SQLite 写锁友好，避免并发冲突
+6. **上传后自动同步** — 零开销：无副本配置的 Resource 不做任何操作
+
+### Architecture
+
+```
+Resource → Replica → Profile → Driver
+           Replica (PRIMARY)    → profile: "default"  → LocalDiskDriver
+           Replica (BACKUP)     → profile: "database"  → DatabaseDriver
+
+SyncTask (PENDING) → SyncTaskScheduler (@Scheduled) → ReplicationEngine
+  → sourceDriver.download() → targetDriver.upload() → SHA-256 verify
+  → update replica (status=READY, checksum, syncTime)
+  → update task (status=COMPLETED, progress=100)
+```
+
+### Backward Compatibility
+
+- P0-P5 API 完全兼容，已有功能无任何破坏
+- 已有 Resource 无 Replica 配置时，P6 代码为零开销（`replicateAfterUpload` 方法内检查为空列表直接返回）
+- `StorageService` 构造函数新增 `ReplicationService` 参数（测试已适配，外部调用者不受影响——Spring DI 自动注入）
+
+---
+
 ## [0.6.0] — 2026-07-16
 
 ### Added — P5 Storage Driver Runtime

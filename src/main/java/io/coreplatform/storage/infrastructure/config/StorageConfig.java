@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -64,6 +65,13 @@ public class StorageConfig {
     public StorageDriverFactory storageDriverFactory(DriverRegistry registry,
                                                       StorageProfileRepository profileRepo,
                                                       io.coreplatform.storage.infrastructure.persistence.repository.StorageResourceRepository resourceRepo) {
+        // 确保 default profile 存在（在 ApplicationRunner 之前初始化）
+        if (profileRepo.count() == 0) {
+            var defaultProfile = io.coreplatform.storage.application.domain.StorageProfile.create(
+                    "default", "local", true);
+            profileRepo.save(defaultProfile);
+            log.info("Auto-created default profile during factory initialization: name=default, driver=local");
+        }
         return new StorageDriverFactory(registry, profileRepo, resourceRepo);
     }
 
@@ -72,6 +80,7 @@ public class StorageConfig {
      * 自动解析为 "default" profile 绑定的驱动。
      */
     @Bean
+    @Primary
     public StorageDriver storageDriver(StorageDriverFactory factory) {
         return factory.getDriverForProfile(null);
     }

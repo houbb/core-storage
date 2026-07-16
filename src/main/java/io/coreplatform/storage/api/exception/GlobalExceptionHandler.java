@@ -1,5 +1,6 @@
 package io.coreplatform.storage.api.exception;
 
+import io.coreplatform.storage.application.service.ReplicationService;
 import io.coreplatform.storage.application.service.StorageAccessService;
 import io.coreplatform.storage.application.service.StorageAccessService.AccessDeniedException;
 import io.coreplatform.storage.application.service.StorageImageService;
@@ -182,6 +183,68 @@ public class GlobalExceptionHandler {
         pd.setTitle("Cannot delete default profile");
         pd.setType(URI.create("https://core-platform.dev/problems/cannot-delete-default-profile"));
         pd.setProperty("errorCode", "STORAGE_CANNOT_DELETE_DEFAULT_PROFILE");
+        return pd;
+    }
+
+    // ---- P6: Replication exceptions ----
+
+    @ExceptionHandler(ReplicationService.ReplicaNotFoundException.class)
+    public ProblemDetail handleReplicaNotFound(ReplicationService.ReplicaNotFoundException ex) {
+        log.warn("Replica not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Replica not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/replica-not-found"));
+        pd.setProperty("errorCode", "STORAGE_REPLICA_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(ReplicationService.ReplicaAlreadyExistsException.class)
+    public ProblemDetail handleReplicaAlreadyExists(ReplicationService.ReplicaAlreadyExistsException ex) {
+        log.warn("Replica already exists: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setTitle("Replica already exists");
+        pd.setType(URI.create("https://core-platform.dev/problems/replica-already-exists"));
+        pd.setProperty("errorCode", "STORAGE_REPLICA_ALREADY_EXISTS");
+        return pd;
+    }
+
+    @ExceptionHandler(ReplicationService.CannotDeletePrimaryReplicaException.class)
+    public ProblemDetail handleCannotDeletePrimary(ReplicationService.CannotDeletePrimaryReplicaException ex) {
+        log.warn("Cannot delete primary replica: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        pd.setTitle("Cannot delete primary replica");
+        pd.setType(URI.create("https://core-platform.dev/problems/cannot-delete-primary-replica"));
+        pd.setProperty("errorCode", "STORAGE_CANNOT_DELETE_PRIMARY_REPLICA");
+        return pd;
+    }
+
+    @ExceptionHandler(ReplicationService.SyncTaskNotFoundException.class)
+    public ProblemDetail handleSyncTaskNotFound(ReplicationService.SyncTaskNotFoundException ex) {
+        log.warn("Sync task not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Sync task not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/sync-task-not-found"));
+        pd.setProperty("errorCode", "STORAGE_SYNC_TASK_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(ReplicationService.SyncTaskAlreadyRunningException.class)
+    public ProblemDetail handleSyncTaskAlreadyRunning(ReplicationService.SyncTaskAlreadyRunningException ex) {
+        log.warn("Sync task already running: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setTitle("Sync task conflict");
+        pd.setType(URI.create("https://core-platform.dev/problems/sync-task-conflict"));
+        pd.setProperty("errorCode", "STORAGE_SYNC_TASK_CONFLICT");
+        return pd;
+    }
+
+    @ExceptionHandler(ReplicationService.InvalidReplicationTargetException.class)
+    public ProblemDetail handleInvalidReplicationTarget(ReplicationService.InvalidReplicationTargetException ex) {
+        log.warn("Invalid replication target: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        pd.setTitle("Invalid replication target");
+        pd.setType(URI.create("https://core-platform.dev/problems/invalid-replication-target"));
+        pd.setProperty("errorCode", "STORAGE_INVALID_REPLICATION_TARGET");
         return pd;
     }
 

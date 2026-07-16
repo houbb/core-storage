@@ -37,17 +37,20 @@ public class StorageService {
     private final StorageMetadataService metadataService;
     private final StorageResourceService resourceService;
     private final StorageImageService imageService;
+    private final ReplicationService replicationService;
 
     public StorageService(StorageFileRepository repository, StorageDriverFactory driverFactory,
                            StorageProperties properties, StorageMetadataService metadataService,
                            StorageResourceService resourceService,
-                           StorageImageService imageService) {
+                           StorageImageService imageService,
+                           ReplicationService replicationService) {
         this.repository = repository;
         this.driverFactory = driverFactory;
         this.properties = properties;
         this.metadataService = metadataService;
         this.resourceService = resourceService;
         this.imageService = imageService;
+        this.replicationService = replicationService;
     }
 
     /**
@@ -220,6 +223,10 @@ public class StorageService {
                     imageService.processUploadedImage(uuid, saved, tempFile);
                     log.info("P4 Image Runtime triggered: metadataUuid={}", uuid);
                 }
+
+                // 4d. P6：自动触发 Replication（如果 Resource 配置了非 PRIMARY 副本）
+                replicationService.replicateAfterUpload(uuid, actualProfile);
+                log.info("P6 Replication check done: metadataUuid={}", uuid);
             }
 
             // 5. 可选：上传时自动创建初始引用

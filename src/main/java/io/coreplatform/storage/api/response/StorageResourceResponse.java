@@ -12,6 +12,7 @@ public class StorageResourceResponse {
     private String resourceUuid;
     private String latestVersionUuid;
     private int versionCount;
+    private String metadataUuid;
     private String resourceName;
     private String resourceType;
     private String category;
@@ -51,6 +52,12 @@ public class StorageResourceResponse {
 
     public String getResourceUuid() { return resourceUuid; }
     public void setResourceUuid(String resourceUuid) { this.resourceUuid = resourceUuid; }
+
+    public String getLatestVersionUuid() { return latestVersionUuid; }
+    public void setLatestVersionUuid(String latestVersionUuid) { this.latestVersionUuid = latestVersionUuid; }
+
+    public int getVersionCount() { return versionCount; }
+    public void setVersionCount(int versionCount) { this.versionCount = versionCount; }
 
     public String getMetadataUuid() { return metadataUuid; }
     public void setMetadataUuid(String metadataUuid) { this.metadataUuid = metadataUuid; }

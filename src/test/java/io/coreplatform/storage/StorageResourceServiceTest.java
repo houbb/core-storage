@@ -10,6 +10,7 @@ import io.coreplatform.storage.infrastructure.persistence.repository.StorageReso
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageResourceRepository;
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageResourceTagRepository;
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageReferenceRepository;
+import io.coreplatform.storage.infrastructure.persistence.repository.StorageVersionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +27,7 @@ class StorageResourceServiceTest {
     private StorageResourceTagRepository tagRepo;
     private StorageResourcePropertyRepository propertyRepo;
     private StorageReferenceRepository referenceRepo;
+    private StorageVersionRepository versionRepo;
 
     @BeforeEach
     void setUp() {
@@ -33,7 +35,8 @@ class StorageResourceServiceTest {
         tagRepo = mock(StorageResourceTagRepository.class);
         propertyRepo = mock(StorageResourcePropertyRepository.class);
         referenceRepo = mock(StorageReferenceRepository.class);
-        resourceService = new StorageResourceService(resourceRepo, tagRepo, propertyRepo, referenceRepo);
+        versionRepo = mock(StorageVersionRepository.class);
+        resourceService = new StorageResourceService(resourceRepo, tagRepo, propertyRepo, referenceRepo, versionRepo);
     }
 
     // ---- 创建资源 ----

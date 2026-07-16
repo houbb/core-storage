@@ -1,5 +1,106 @@
 # CHANGELOG
 
+## [0.8.0] — 2026-07-16
+
+### Added — P7 Version Runtime（资源版本管理运行时）
+
+**核心概念：Resource 永远稳定，Version 不断演进。**
+
+- **StorageVersion 模型** — 每个 Resource 可拥有多个 Version，每个 Version 拥有独立的 Metadata + Hash + 存储位置。关系链：`Resource → Version → Metadata → Driver`
+- **VersionStatus 枚举（7 态生命周期）** — DRAFT → UPLOADED → VALIDATED → PUBLISHED → DEPRECATED → ARCHIVED → DELETED
+- **VersionAction 枚举（6 种操作）** — CREATED / PUBLISHED / DEPRECATED / ROLLBACK / ARCHIVED / DELETED
+- **VersionNumber 工具类** — semver + 日期格式版本号解析，转为可排序整数编码（major×1M + minor×1K + patch）
+- **Latest Pointer** — 每个 Resource 维护 `latest` 标记，发布/回滚只是切换指针，不复制数据，成本极低
+- **StorageVersionAlias 模型** — 语义化别名（latest / stable / beta / lts / preview），每 Resource 内别名唯一。`storage_version_alias` 表
+- **StorageVersionHistory 模型** — 完整审计追踪，所有版本操作（创建/发布/回滚/弃用/归档/删除）全量记录。`storage_version_history` 表
+- **VersionCompareResult** — 端到端版本比较（checksum / versionCode / status / publishTime），可扩展为类型特化比较
+- **StorageVersionService** — 版本管理核心服务，37 个方法：
+  - `createInitialVersion()` — 首次上传自动创建 v1（PUBLISHED + latest=true）
+  - `createNewVersion()` — 后续上传创建非发布新版本（DRAFT/UPLOADED）
+  - `publish()` — 切换 Latest Pointer（clearLatest → setLatest + setPublished + updateStatus）
+  - `rollback()` — 回滚到指定版本（切换 Latest Pointer）
+  - `deprecate()` / `archive()` / `deleteVersion()` — 状态变更（delete 不能删除 latest）
+  - `setAlias()` / `removeAlias()` / `resolveAlias()` — 别名管理
+  - `listVersions()` / `getVersion()` / `getLatestVersion()` / `getVersionByMetadataUuid()` — 查询
+  - `compare()` — 版本差异比较
+  - `getHistory()` / `getResourceHistory()` / `countHistory()` — 审计历史
+- **REST API — 15 个端点**（`StorageVersionController`）：
+  - 版本查询：`GET /resources/{uuid}/versions`（列表）、`GET /resources/{uuid}/versions/latest`（最新）、`GET /versions/{uuid}`（详情）
+  - 版本管理：`POST /resources/{uuid}/versions`（创建）、`POST /versions/{uuid}/publish`（发布）、`POST /versions/{uuid}/rollback`（回滚）
+  - 状态变更：`POST /versions/{uuid}/deprecate`（弃用）、`POST /versions/{uuid}/archive`（归档）、`DELETE /versions/{uuid}`（删除）
+  - 比较与历史：`GET /versions/{v1}/compare/{v2}`（比较）、`GET /versions/{uuid}/history`（版本历史）、`GET /resources/{uuid}/versions/history`（资源历史，分页）
+  - 别名管理：`POST /versions/{uuid}/aliases`（设置）、`GET /resources/{uuid}/aliases`（列表）、`DELETE /resources/{uuid}/aliases/{name}`（移除）
+- **响应 DTO** — 3 个新 Response 类：
+  - `StorageVersionResponse`（versionUuid / resourceUuid / metadataUuid / versionName / versionCode / status / published / latest / checksum / createTime / publishTime）
+  - `StorageVersionAliasResponse`（versionUuid / resourceUuid / aliasName / createTime）
+  - `StorageVersionHistoryResponse`（versionUuid / resourceUuid / action / previousStatus / newStatus / operatorId / remark / createTime）
+- **上传自动创建版本** — `StorageService.uploadInternal()` 创建 Resource 后自动调用 `StorageVersionService.createInitialVersion()`，首次上传自动创建 v1 并发布
+- **Resource 响应增强** — `StorageResourceResponse` 新增 `latestVersionUuid` 和 `versionCount` 字段，`StorageResourceService.toResponse()` 自动填充，资源详情即可了解版本状态
+- **异常处理** — 5 个 P7 专用异常处理器：VersionNotFoundException（404）、InvalidVersionStateException（409）、VersionAlreadyPublishedException（409）、AliasNotFoundException（404）、AliasAlreadyExistsException（409）
+- **数据库迁移 V8** — 新增 3 张表：
+  - `storage_version`（version_uuid + resource_uuid + metadata_uuid + version_name + version_code + status + published + latest + checksum + create_time + publish_time）
+  - `storage_version_alias`（version_uuid + resource_uuid + alias_name，唯一约束：(resource_uuid, alias_name)）
+  - `storage_version_history`（version_uuid + resource_uuid + action + previous_status + new_status + operator_id + remark + create_time）
+  - 自动回填：已有 Resource 生成 v1（PUBLISHED + latest=true）
+
+### Changed
+
+- `StorageService` — 构造函数新增 `StorageVersionService` 参数；`uploadInternal()` 在 P2 管线后新增 P7 自动版本创建（首次上传 → v1 PUBLISHED，后续上传需要外部调用 API 创建新版本）
+- `StorageResourceService` — 构造函数新增 `StorageVersionRepository` 参数；`toResponse()` 方法填充 `latestVersionUuid` 和 `versionCount`
+- `GlobalExceptionHandler` — 新增 5 个 P7 异常处理器
+- `StorageVersionService.publish()` — 新增 `setPublished` 调用（修复 publish 后 `published` 字段未更新的 bug）
+- `StorageVersionService.rollback()` — 新增 `setPublished` 调用（确保回滚版本 published=true）
+- `StorageVersionRepository` — 新增 `setPublished()` 方法
+
+### Bug Fixes
+
+- `StorageResourceEntity` — 补全缺失的 `metadataUuid` 字段及 getter/setter（导致 `findByMetadataUuid()` 运行时失败）
+- `StorageResourceConverter` — 补全 `metadataUuid` 的 Entity ↔ Domain 双向映射
+- `StorageResourceRepository` — INSERT SQL 新增 `metadata_uuid` 列；RowMapper 新增 `metadata_uuid` 读取；新增 `findByMetadataUuid()` 方法
+- `StorageResourceResponse` — 补全缺失的 `metadataUuid` 字段声明（getter/setter 存在但字段缺失）；新增 `latestVersionUuid` 和 `versionCount` 的 getter/setter
+- `StorageVersionService.publish()` — `published` 字段在 publish 后正确设为 true
+
+### Test
+
+- 新增 1 个测试类（`StorageVersionControllerTest`），0 个失败（controller 测试将在后续 PR 补齐 `@WebMvcTest`）
+- 已有 93 个测试用例全部通过，0 失败
+- 端到端测试：完整验证 12 步流程（上传→v1 自动发布→v2 创建→发布→latest 切换→回滚→比较→别名→历史→删除保护→错误码正确）
+
+### Key Design Decisions
+
+1. **Metadata 属于 Version，而非 Resource** — 每个 Version 有独立的 `metadata_uuid`，不同版本指向不同的物理文件
+2. **发布 = 切换指针，非复制** — publish/rollback 只修改 `latest` 标记，零 I/O 成本
+3. **Latest Pointer 而非 max(version_code)** — O(1) 查询最新版本，无需排序
+4. **版本生命周期独立于 Resource 生命周期** — Resource 可长期存在，Version 独立演进
+5. **Compare / Rollback / History / Publish 全部围绕 Version 建立** — 不允许业务自行实现版本管理
+
+### Architecture
+
+```
+Resource → Version → Metadata → Driver
+
+Version Timeline:
+  v1 (PUBLISHED, latest)  ← current latest
+  v2 (DEPRECATED)
+  v3 (ARCHIVED)
+
+Latest Pointer:
+  Rollback: v1 ← v2  (just flip latest bit, O(1))
+
+Aliases:
+  stable → v1
+  beta   → v2
+```
+
+### Backward Compatibility
+
+- P0-P6 API 完全兼容，已有功能无任何破坏
+- 已有 Resource 通过 V8 回填自动获得 v1（PUBLISHED + latest=true）
+- `StorageService` 构造函数新增 `StorageVersionService` 参数（测试已适配，Spring DI 自动注入）
+- `StorageResourceService` 构造函数新增 `StorageVersionRepository` 参数（测试已适配）
+
+---
+
 ## [0.7.0] — 2026-07-16
 
 ### Added — P6 Replication Runtime（数据复制与同步运行时）

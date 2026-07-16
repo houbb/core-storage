@@ -3,6 +3,7 @@ package io.coreplatform.storage.application.service;
 import io.coreplatform.storage.api.response.StorageFileResponse;
 import io.coreplatform.storage.application.domain.StorageFile;
 import io.coreplatform.storage.application.domain.StorageMetadata;
+import io.coreplatform.storage.application.domain.StorageResource;
 import io.coreplatform.storage.application.domain.enums.ResourceType;
 import io.coreplatform.storage.application.port.StorageDriver;
 import io.coreplatform.storage.infrastructure.config.StorageProperties;
@@ -38,12 +39,14 @@ public class StorageService {
     private final StorageResourceService resourceService;
     private final StorageImageService imageService;
     private final ReplicationService replicationService;
+    private final StorageVersionService versionService;
 
     public StorageService(StorageFileRepository repository, StorageDriverFactory driverFactory,
                            StorageProperties properties, StorageMetadataService metadataService,
                            StorageResourceService resourceService,
                            StorageImageService imageService,
-                           ReplicationService replicationService) {
+                           ReplicationService replicationService,
+                           StorageVersionService versionService) {
         this.repository = repository;
         this.driverFactory = driverFactory;
         this.properties = properties;
@@ -51,6 +54,7 @@ public class StorageService {
         this.resourceService = resourceService;
         this.imageService = imageService;
         this.replicationService = replicationService;
+        this.versionService = versionService;
     }
 
     /**
@@ -211,12 +215,23 @@ public class StorageService {
                     }
                 }
 
-                resourceService.createResource(uuid, resourceName, inferredType,
+                StorageResource createdResource =
+                        resourceService.createResource(uuid, resourceName, inferredType,
                         category, description, ownerType, ownerId, visibility,
                         accessMode,
                         tagListSafe, propsSafe, actualProfile);
                 resourceService.updateStatus(uuid, "READY");
                 log.info("P2 Resource created: metadataUuid={}, type={}", uuid, inferredType);
+
+                // 4b2. P7：自动创建 Version（首次上传 → v1 PUBLISHED；非首次 → DRAFT）
+                int versionCount = versionService.listVersions(createdResource.getResourceUuid()).size();
+                if (versionCount == 0) {
+                    versionService.createInitialVersion(createdResource.getResourceUuid(), uuid, hash, null);
+                    log.info("P7 Version v1 created: resourceUuid={}", createdResource.getResourceUuid());
+                } else {
+                    versionService.createNewVersion(createdResource.getResourceUuid(), uuid, hash, null, null);
+                    log.info("P7 New version created: resourceUuid={}", createdResource.getResourceUuid());
+                }
 
                 // 4c. P4：如果是 IMAGE 类型，自动触发 Image Runtime
                 if (ResourceType.IMAGE.name().equals(inferredType)) {

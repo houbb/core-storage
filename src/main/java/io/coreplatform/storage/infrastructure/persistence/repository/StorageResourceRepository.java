@@ -27,6 +27,7 @@ public class StorageResourceRepository {
         StorageResourceEntity e = new StorageResourceEntity();
         e.setId(rs.getLong("id"));
         e.setResourceUuid(rs.getString("resource_uuid"));
+        e.setMetadataUuid(rs.getString("metadata_uuid"));
         e.setResourceName(rs.getString("resource_name"));
         e.setResourceType(rs.getString("resource_type"));
         e.setCategory(rs.getString("category"));
@@ -59,16 +60,17 @@ public class StorageResourceRepository {
         entity.setUpdateTime(LocalDateTime.now());
 
         String sql = "INSERT INTO storage_resource (" +
-                "resource_uuid, resource_name, resource_type, category, " +
+                "resource_uuid, metadata_uuid, resource_name, resource_type, category, " +
                 "description, owner_type, owner_id, visibility, access_mode, profile_name, status, " +
                 "create_time, update_time, create_user, update_user" +
-                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbc.update(con -> {
             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             int i = 1;
             ps.setString(i++, entity.getResourceUuid());
+            ps.setString(i++, entity.getMetadataUuid());
             ps.setString(i++, entity.getResourceName());
             ps.setString(i++, entity.getResourceType());
             ps.setString(i++, entity.getCategory());
@@ -126,6 +128,19 @@ public class StorageResourceRepository {
         return jdbc.update(
                 "UPDATE storage_resource SET status = ?, update_time = ? WHERE resource_uuid = ?",
                 status, Timestamp.valueOf(LocalDateTime.now()), resourceUuid);
+    }
+
+    /**
+     * 根据 metadata_uuid 反向查找资源。
+     */
+    public Optional<StorageResource> findByMetadataUuid(String metadataUuid) {
+        try {
+            StorageResourceEntity e = jdbc.queryForObject(
+                    "SELECT * FROM storage_resource WHERE metadata_uuid = ?", ROW_MAPPER, metadataUuid);
+            return Optional.ofNullable(StorageResourceConverter.toDomain(e));
+        } catch (EmptyResultDataAccessException ex) {
+            return Optional.empty();
+        }
     }
 
     /**

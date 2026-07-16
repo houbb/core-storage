@@ -9,6 +9,7 @@ public class StorageResourceEntity {
 
     private Long id;
     private String resourceUuid;
+    private String metadataUuid;
     private String resourceName;
     private String resourceType;
     private String category;
@@ -32,6 +33,9 @@ public class StorageResourceEntity {
 
     public String getResourceUuid() { return resourceUuid; }
     public void setResourceUuid(String resourceUuid) { this.resourceUuid = resourceUuid; }
+
+    public String getMetadataUuid() { return metadataUuid; }
+    public void setMetadataUuid(String metadataUuid) { this.metadataUuid = metadataUuid; }
 
     public String getResourceName() { return resourceName; }
     public void setResourceName(String resourceName) { this.resourceName = resourceName; }

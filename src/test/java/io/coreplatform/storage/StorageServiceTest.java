@@ -12,6 +12,7 @@ import io.coreplatform.storage.application.service.StorageImageService;
 import io.coreplatform.storage.application.service.StorageMetadataService;
 import io.coreplatform.storage.application.service.StorageResourceService;
 import io.coreplatform.storage.application.service.StorageService;
+import io.coreplatform.storage.application.service.StorageVersionService;
 import io.coreplatform.storage.infrastructure.config.StorageProperties;
 import io.coreplatform.storage.infrastructure.driver.StorageDriverFactory;
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageFileRepository;
@@ -36,6 +37,7 @@ class StorageServiceTest {
     private StorageResourceService resourceService;
     private StorageImageService imageService;
     private ReplicationService replicationService;
+    private StorageVersionService versionService;
 
     @TempDir
     Path tempDir;
@@ -61,8 +63,9 @@ class StorageServiceTest {
         resourceService = mock(StorageResourceService.class);
         imageService = mock(StorageImageService.class);
         replicationService = mock(ReplicationService.class);
+        versionService = mock(StorageVersionService.class);
 
-        service = new StorageService(repository, driverFactory, properties, metadataService, resourceService, imageService, replicationService);
+        service = new StorageService(repository, driverFactory, properties, metadataService, resourceService, imageService, replicationService, versionService);
     }
 
     @Test

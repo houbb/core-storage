@@ -141,6 +141,13 @@ public class StorageVersionRepository {
                 latest ? 1 : 0, versionUuid);
     }
 
+    /** 设置 published 标记 */
+    public int setPublished(String versionUuid, boolean published) {
+        return jdbc.update(
+                "UPDATE storage_version SET published = ? WHERE version_uuid = ?",
+                published ? 1 : 0, versionUuid);
+    }
+
     /** 清除 Resource 所有版本的 latest 标记 */
     public int clearLatestForResource(String resourceUuid) {
         return jdbc.update(

@@ -14,6 +14,7 @@ import io.coreplatform.storage.infrastructure.persistence.repository.StorageReso
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageResourceRepository;
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageResourceTagRepository;
 import io.coreplatform.storage.infrastructure.persistence.repository.StorageReferenceRepository;
+import io.coreplatform.storage.infrastructure.persistence.repository.StorageVersionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -30,15 +31,18 @@ public class StorageResourceService {
     private final StorageResourceTagRepository tagRepo;
     private final StorageResourcePropertyRepository propertyRepo;
     private final StorageReferenceRepository referenceRepo;
+    private final StorageVersionRepository versionRepo;
 
     public StorageResourceService(StorageResourceRepository resourceRepo,
                                    StorageResourceTagRepository tagRepo,
                                    StorageResourcePropertyRepository propertyRepo,
-                                   StorageReferenceRepository referenceRepo) {
+                                   StorageReferenceRepository referenceRepo,
+                                   StorageVersionRepository versionRepo) {
         this.resourceRepo = resourceRepo;
         this.tagRepo = tagRepo;
         this.propertyRepo = propertyRepo;
         this.referenceRepo = referenceRepo;
+        this.versionRepo = versionRepo;
     }
 
     /**
@@ -230,6 +234,12 @@ public class StorageResourceService {
         resp.setCreateTime(r.getCreateTime());
         resp.setUpdateTime(r.getUpdateTime());
         resp.setDownloadUrl("/api/v1/storage/resources/" + r.getResourceUuid() + "/download");
+
+        // P7: populate version summary
+        versionRepo.findLatestByResourceUuid(r.getResourceUuid())
+                .ifPresent(v -> resp.setLatestVersionUuid(v.getVersionUuid()));
+        resp.setVersionCount(versionRepo.countByResourceUuid(r.getResourceUuid()));
+
         return resp;
     }
 

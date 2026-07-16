@@ -210,3 +210,133 @@ Follow these rules:
 2）尽可能的端到端测试验证，保障整体功能正确性
 
 3）简明扼要的使用+变更内容
+
+---
+
+# 架构分层约束 ⚠️ 强制遵守
+
+## 核心分层模型（自顶向下）
+
+```
+StorageResource        ← 业务第一入口（稳定身份）
+    │
+StorageVersion         ← 资源演化历史（不断演进）
+    │
+StorageMetadata        ← 唯一可信来源（文件身份）
+    │
+StorageReplica         ← 多副本拓扑
+    │
+StorageProfile         ← 存储配置（绑定 Driver）
+    │
+StorageDriver          ← SPI 接口（local / database / s3 / …）
+    │
+LocalDisk / Database / MinIO / OSS / S3
+```
+
+## 铁律
+
+1. **Resource 是稳定身份，Version 是演进历史。** Resource UUID 永远不变，Version UUID 每次发布生成。
+2. **Metadata 属于 Version，不属于 Resource。** 每个版本拥有独立的 Metadata、Hash、存储位置。`resource.metadata_uuid` 只是最新版本的指针。
+3. **发布（Publish）不是复制资源，而是切换 Latest Pointer。** 回滚只改指针，成本 O(1)。
+4. **所有 Version 操作必须记录 History。** 每条 CREATED / PUBLISHED / DEPRECATED / ROLLBACK / ARCHIVED / DELETED 操作必须写入 `storage_version_history`。
+5. **Latest 版本不可删除。** `DELETE /versions/{latest}` 必须返回 409。
+6. **别名在 Resource 内唯一。** `(resource_uuid, alias_name)` 有 unique index，重复设置同一别名自动覆盖。
+
+---
+
+# 版本管理 API 速查（P7 Version Runtime）
+
+## 版本 CRUD
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/storage/resources/{uuid}/versions` | 列出资源所有版本（按 version_code DESC） |
+| GET | `/api/v1/storage/resources/{uuid}/versions/latest` | 获取最新版本（O(1) latest 指针） |
+| POST | `/api/v1/storage/resources/{uuid}/versions` | 创建新版本（需 metadataUuid + checksum） |
+| GET | `/api/v1/storage/versions/{uuid}` | 获取版本详情 |
+| POST | `/api/v1/storage/versions/{uuid}/publish` | 发布版本（切换 latest + 设 published=true） |
+| POST | `/api/v1/storage/versions/{uuid}/rollback` | 回滚到该版本（切换 latest） |
+| POST | `/api/v1/storage/versions/{uuid}/deprecate` | 标记为不推荐 |
+| POST | `/api/v1/storage/versions/{uuid}/archive` | 归档版本 |
+| DELETE | `/api/v1/storage/versions/{uuid}` | 删除版本（latest 版本返回 409） |
+
+## 比较与历史
+
+| GET | `/api/v1/storage/versions/{v1}/compare/{v2}` | 比较两个版本的差异 |
+| GET | `/api/v1/storage/versions/{uuid}/history` | 获取版本操作历史 |
+| GET | `/api/v1/storage/resources/{uuid}/versions/history?page=1&size=20` | 资源级操作历史（分页） |
+
+## 别名管理
+
+| POST | `/api/v1/storage/versions/{uuid}/aliases` | 设置别名 `{"aliasName":"stable"}` |
+| GET | `/api/v1/storage/resources/{uuid}/aliases` | 列出资源所有别名 |
+| DELETE | `/api/v1/storage/resources/{uuid}/aliases/{name}` | 移除别名 |
+
+## Resource 响应中的版本字段
+
+- `latestVersionUuid` — 当前最新版本的 UUID（每次 GET /resources/{uuid} 自动计算）
+- `versionCount` — 该资源的版本总数
+
+---
+
+# 上传 → 版本自动创建流程
+
+```
+1. StorageService.uploadInternal()
+2.   → StorageFileRepository.save()          // P0
+3.   → StorageMetadataService.saveMetadata()  // P1 双写
+4.   → StorageResourceService.createResource() // P2 创建资源
+5.     → StorageVersionService.listVersions() // P7 检查已有版本数
+6.     → versionCount == 0 ?
+7.         → createInitialVersion()           // v1 PUBLISHED + latest=true
+8.       : → createNewVersion()               // 新版本 UPLOADED（需手动 publish）
+```
+
+**注意：** 目前上传只自动创建版本，不支持"同一 resourceUuid 的 repeat upload"。每次上传都创建新 Resource。如需向已有 Resource 添加新版本，请使用 `POST /api/v1/storage/resources/{uuid}/versions` API。
+
+---
+
+# 代码风格约束 ⚠️ 强制执行
+
+1. **新 controller/service/repository 必须遵循已有三层架构：** `api.controller → application.service → infrastructure.persistence.repository`
+2. **所有 Response DTO 放在** `api.response` 包下，命名 `StorageXxxResponse`
+3. **所有 domain 对象放在** `application.domain` 包下，有自己的 `create()` 工厂方法
+4. **所有 entity 放在** `infrastructure.persistence.entity` 包下，有对应的 `*Converter` 双向转换
+5. **所有 repository 使用 JdbcTemplate + RowMapper**，不使用 JPA/MyBatis
+6. **所有 controller 使用 constructor injection**，禁止 `@Autowired` 字段注入
+7. **所有异常必须注册到 GlobalExceptionHandler**，返回 RFC 7807 ProblemDetail
+8. **数据库表命名：** `storage_*`，字段 snake_case，Java 字段 camelCase
+
+---
+
+# 测试要求 ⚠️ 强制执行
+
+## 每次 PR 必须通过
+
+1. `mvn clean compile` — 零编译错误
+2. `mvn test` — 全部已有测试通过（当前：93 个测试用例）
+3. 端到端测试（至少验证核心流程）：
+   - 上传 → v1 自动发布
+   - 创建新版本 → 发布 → latest 切换
+   - 回滚 → latest 指针正确切换
+   - 比较 → 差异正确
+   - 别名 CRUD
+   - 删除保护（latest 不可删 → 409）
+
+## 测试分层
+
+- **单元测试** — `*ServiceTest`（Mockito mock Repository，覆盖正常 + 异常路径）
+- **Controller 测试** — `*ControllerTest`（`@WebMvcTest` + `@MockBean` service）
+- **端到端测试** — 启动完整 Spring Boot 应用，curl 验证（见上方流程）
+
+---
+
+# 常见坑点（已知问题 × 解决方案）
+
+| 问题 | 原因 | 解决 |
+|------|------|------|
+| `findByMetadataUuid()` 返回空 | `StorageResourceEntity` 未映射 `metadata_uuid` 字段 | 确保 Entity/Converter/Repository RowMapper 三处同步 |
+| publish 后 `published` 仍为 false | `publish()` 只调了 `setLatest` 没调 `setPublished` | 调用 `versionRepo.setPublished(versionUuid, true)` |
+| 上传不自动创建版本 | `uploadInternal()` 无 P7 管线 | 检查 `StorageService` 是否注入了 `StorageVersionService` |
+| Resource 响应缺少 `latestVersionUuid` | `toResponse()` 未调用 versionRepo | 确保 `StorageResourceService` 注入了 `StorageVersionRepository` |
+| Maven 编译成功但 `java -jar` 报 class version 65.0 | IDE/Maven 用的 JDK 与运行时不一致 | 统一使用 JDK 17，`mvn clean compile` 后检查 `javap -v` |

@@ -21,6 +21,7 @@ public final class StorageResourceConverter {
         StorageResource d = new StorageResource();
         d.setId(e.getId());
         d.setResourceUuid(e.getResourceUuid());
+        d.setMetadataUuid(e.getMetadataUuid());
         d.setResourceName(e.getResourceName());
         d.setResourceType(safeEnum(ResourceType.class, e.getResourceType(), ResourceType.OTHER));
         d.setCategory(safeEnum(ResourceCategory.class, e.getCategory(), ResourceCategory.OTHER));
@@ -43,6 +44,7 @@ public final class StorageResourceConverter {
         StorageResourceEntity e = new StorageResourceEntity();
         e.setId(d.getId());
         e.setResourceUuid(d.getResourceUuid());
+        e.setMetadataUuid(d.getMetadataUuid());
         e.setResourceName(d.getResourceName());
         e.setResourceType(d.getResourceType() != null ? d.getResourceType().name() : null);
         e.setCategory(d.getCategory() != null ? d.getCategory().name() : null);

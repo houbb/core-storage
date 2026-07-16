@@ -107,8 +107,9 @@ public class StorageVersionService {
         // 清除当前 latest
         versionRepo.clearLatestForResource(version.getResourceUuid());
 
-        // 设置新 latest
+        // 设置新 latest + published
         versionRepo.setLatest(versionUuid, true);
+        versionRepo.setPublished(versionUuid, true);
         versionRepo.updateStatus(versionUuid, VersionStatus.PUBLISHED.name());
         versionRepo.updatePublishTime(versionUuid);
 
@@ -138,8 +139,9 @@ public class StorageVersionService {
         // 清除所有 latest
         versionRepo.clearLatestForResource(resourceUuid);
 
-        // 设置目标版本为 latest
+        // 设置目标版本为 latest + published
         versionRepo.setLatest(targetVersionUuid, true);
+        versionRepo.setPublished(targetVersionUuid, true);
         if (!target.isPublished()) {
             versionRepo.updateStatus(targetVersionUuid, VersionStatus.PUBLISHED.name());
         }

@@ -8,6 +8,7 @@ import io.coreplatform.storage.application.service.StorageMetadataService;
 import io.coreplatform.storage.application.service.StorageProfileService;
 import io.coreplatform.storage.application.service.StorageResourceService;
 import io.coreplatform.storage.application.service.StorageService;
+import io.coreplatform.storage.application.service.StorageVersionService;
 import io.coreplatform.storage.application.service.ImagePipeline;
 import io.coreplatform.storage.infrastructure.driver.DriverRegistry;
 import io.coreplatform.storage.infrastructure.driver.StorageDriverFactory;
@@ -245,6 +246,58 @@ public class GlobalExceptionHandler {
         pd.setTitle("Invalid replication target");
         pd.setType(URI.create("https://core-platform.dev/problems/invalid-replication-target"));
         pd.setProperty("errorCode", "STORAGE_INVALID_REPLICATION_TARGET");
+        return pd;
+    }
+
+    // ---- P7: Version exceptions ----
+
+    @ExceptionHandler(StorageVersionService.VersionNotFoundException.class)
+    public ProblemDetail handleVersionNotFound(StorageVersionService.VersionNotFoundException ex) {
+        log.warn("Version not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Version not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/version-not-found"));
+        pd.setProperty("errorCode", "STORAGE_VERSION_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageVersionService.InvalidVersionStateException.class)
+    public ProblemDetail handleInvalidVersionState(StorageVersionService.InvalidVersionStateException ex) {
+        log.warn("Invalid version state: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setTitle("Invalid version state");
+        pd.setType(URI.create("https://core-platform.dev/problems/invalid-version-state"));
+        pd.setProperty("errorCode", "STORAGE_INVALID_VERSION_STATE");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageVersionService.VersionAlreadyPublishedException.class)
+    public ProblemDetail handleVersionAlreadyPublished(StorageVersionService.VersionAlreadyPublishedException ex) {
+        log.warn("Version already published: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setTitle("Version already published");
+        pd.setType(URI.create("https://core-platform.dev/problems/version-already-published"));
+        pd.setProperty("errorCode", "STORAGE_VERSION_ALREADY_PUBLISHED");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageVersionService.AliasNotFoundException.class)
+    public ProblemDetail handleAliasNotFound(StorageVersionService.AliasNotFoundException ex) {
+        log.warn("Alias not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Alias not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/alias-not-found"));
+        pd.setProperty("errorCode", "STORAGE_ALIAS_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageVersionService.AliasAlreadyExistsException.class)
+    public ProblemDetail handleAliasAlreadyExists(StorageVersionService.AliasAlreadyExistsException ex) {
+        log.warn("Alias already exists: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setTitle("Alias already exists");
+        pd.setType(URI.create("https://core-platform.dev/problems/alias-already-exists"));
+        pd.setProperty("errorCode", "STORAGE_ALIAS_ALREADY_EXISTS");
         return pd;
     }
 

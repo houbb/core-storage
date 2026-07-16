@@ -39,13 +39,14 @@ public class StorageResourceController {
             @RequestParam(required = false) String ownerId,
             @RequestParam(required = false) String tag,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String tenantId,
             @RequestParam(defaultValue = "createTime") String sort,
             @RequestParam(defaultValue = "desc") String order,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         return resourceService.search(keyword, resourceType, category, visibility,
-                ownerType, ownerId, tag, status, sort, order, page, size);
+                ownerType, ownerId, tag, status, tenantId, sort, order, page, size);
     }
 
     @PutMapping("/{uuid}")

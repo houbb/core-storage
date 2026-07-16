@@ -35,6 +35,7 @@ public final class StorageMetadataConverter {
         d.setRemark(e.getRemark());
         d.setStatus(e.getStatus());
         d.setDeleted(e.getDeleted() != null && e.getDeleted() != 0);
+        d.setTenantId(e.getTenantId());
         d.setCreateTime(e.getCreateTime());
         d.setUpdateTime(e.getUpdateTime());
         d.setCreateUser(e.getCreateUser());
@@ -67,6 +68,7 @@ public final class StorageMetadataConverter {
         e.setRemark(d.getRemark());
         e.setStatus(d.getStatus());
         e.setDeleted(d.isDeleted() ? 1 : 0);
+        e.setTenantId(d.getTenantId());
         e.setCreateTime(d.getCreateTime());
         e.setUpdateTime(d.getUpdateTime());
         e.setCreateUser(d.getCreateUser());

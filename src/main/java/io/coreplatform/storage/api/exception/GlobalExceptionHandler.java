@@ -5,13 +5,16 @@ import io.coreplatform.storage.application.service.LifecyclePolicyService;
 import io.coreplatform.storage.application.service.ReplicationService;
 import io.coreplatform.storage.application.service.ResourceHoldService;
 import io.coreplatform.storage.application.service.StorageAccessService;
-import io.coreplatform.storage.application.service.StorageAccessService;
 import io.coreplatform.storage.application.service.StorageAccessService.AccessDeniedException;
 import io.coreplatform.storage.application.service.StorageImageService;
 import io.coreplatform.storage.application.service.StorageMetadataService;
 import io.coreplatform.storage.application.service.StorageProfileService;
+import io.coreplatform.storage.application.service.StorageQuotaService;
+import io.coreplatform.storage.application.service.StorageRegionService;
 import io.coreplatform.storage.application.service.StorageResourceService;
+import io.coreplatform.storage.application.service.StorageScanService;
 import io.coreplatform.storage.application.service.StorageService;
+import io.coreplatform.storage.application.service.StorageTenantService;
 import io.coreplatform.storage.application.service.StorageVersionService;
 import io.coreplatform.storage.application.service.ImagePipeline;
 import io.coreplatform.storage.infrastructure.driver.DriverRegistry;
@@ -364,6 +367,78 @@ public class GlobalExceptionHandler {
         pd.setTitle("Hold not found");
         pd.setType(URI.create("https://core-platform.dev/problems/hold-not-found"));
         pd.setProperty("errorCode", "STORAGE_HOLD_NOT_FOUND");
+        return pd;
+    }
+
+    // ─── P9 Enterprise Runtime Exceptions ───
+
+    @ExceptionHandler(StorageTenantService.TenantNotFoundException.class)
+    public ProblemDetail handleTenantNotFound(StorageTenantService.TenantNotFoundException ex) {
+        log.warn("Tenant not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Tenant not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/tenant-not-found"));
+        pd.setProperty("errorCode", "STORAGE_TENANT_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageTenantService.TenantAlreadyExistsException.class)
+    public ProblemDetail handleTenantAlreadyExists(StorageTenantService.TenantAlreadyExistsException ex) {
+        log.warn("Tenant already exists: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setTitle("Tenant already exists");
+        pd.setType(URI.create("https://core-platform.dev/problems/tenant-already-exists"));
+        pd.setProperty("errorCode", "STORAGE_TENANT_ALREADY_EXISTS");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageTenantService.TenantSuspendedException.class)
+    public ProblemDetail handleTenantSuspended(StorageTenantService.TenantSuspendedException ex) {
+        log.warn("Tenant suspended: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        pd.setTitle("Tenant suspended");
+        pd.setType(URI.create("https://core-platform.dev/problems/tenant-suspended"));
+        pd.setProperty("errorCode", "STORAGE_TENANT_SUSPENDED");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageQuotaService.QuotaExceededException.class)
+    public ProblemDetail handleQuotaExceeded(StorageQuotaService.QuotaExceededException ex) {
+        log.warn("Quota exceeded: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.PAYLOAD_TOO_LARGE, ex.getMessage());
+        pd.setTitle("Quota exceeded");
+        pd.setType(URI.create("https://core-platform.dev/problems/quota-exceeded"));
+        pd.setProperty("errorCode", "STORAGE_QUOTA_EXCEEDED");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageRegionService.RegionNotFoundException.class)
+    public ProblemDetail handleRegionNotFound(StorageRegionService.RegionNotFoundException ex) {
+        log.warn("Region not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Region not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/region-not-found"));
+        pd.setProperty("errorCode", "STORAGE_REGION_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageRegionService.RegionAlreadyExistsException.class)
+    public ProblemDetail handleRegionAlreadyExists(StorageRegionService.RegionAlreadyExistsException ex) {
+        log.warn("Region already exists: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setTitle("Region already exists");
+        pd.setType(URI.create("https://core-platform.dev/problems/region-already-exists"));
+        pd.setProperty("errorCode", "STORAGE_REGION_ALREADY_EXISTS");
+        return pd;
+    }
+
+    @ExceptionHandler(StorageScanService.ScanNotFoundException.class)
+    public ProblemDetail handleScanNotFound(StorageScanService.ScanNotFoundException ex) {
+        log.warn("Scan not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Scan not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/scan-not-found"));
+        pd.setProperty("errorCode", "STORAGE_SCAN_NOT_FOUND");
         return pd;
     }
 

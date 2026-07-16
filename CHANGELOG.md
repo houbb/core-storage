@@ -1,5 +1,63 @@
 # CHANGELOG
 
+## [0.10.0] — 2026-07-17
+
+### Added — P9 Enterprise Resource Platform（企业资源平台治理运行时）
+
+**核心概念：Storage 不再只是存储，而是企业资源基础设施。**
+
+#### 多租户 Tenant Runtime
+- **TenantStatus 枚举** — ACTIVE / SUSPENDED / DELETED，租户全生命周期状态管理
+- **StorageTenant 模型** — 租户创建、激活、暂停、删除（软删除），`isActive()` 领域行为
+- **StorageTenantService** — 租户 CRUD + 活跃状态校验（`validateActive()`），含 `TenantNotFoundException` / `TenantAlreadyExistsException` / `TenantSuspendedException`
+- **StorageTenantController** — `GET/POST/PUT/DELETE /api/v1/storage/tenants`
+- **全链路租户隔离** — `storage_resource`、`storage_metadata`、`storage_access_log` 三表增加 `tenant_id` 列（默认 `'default'` 向后兼容），资源搜索支持租户过滤
+
+#### 区域 Region Runtime
+- **StorageRegion 模型** — 区域代码、名称、Endpoint、Driver 绑定，支持多区域存储驱动映射
+- **StorageRegionService** — 区域 CRUD，`RegionNotFoundException` / `RegionAlreadyExistsException`
+- **StorageRegionController** — `GET/POST/PUT/DELETE /api/v1/storage/regions`
+
+#### 配额 Quota Runtime
+- **StorageQuota 模型** — 租户级配额（limit_size / used_size），`isExceeded(additionalBytes)` 和 `remainingBytes()` 领域行为
+- **StorageQuotaService** — `checkAndReserve()` 同步配额校验（上传前）、`releaseQuota()` 释放预占，`QuotaExceededException` → HTTP 413
+- **StorageQuotaController** — `GET/PUT /api/v1/storage/quota`，`GET /api/v1/storage/quotas`
+- 默认配额：V10 迁移插入 `default` 租户全局配额 100 GB
+
+#### 统一审计 Audit Runtime
+- **AuditAction 枚举** — UPLOAD / DOWNLOAD / PREVIEW / DELETE / UPDATE / PUBLISH / SHARE / MOVE / ARCHIVE / RESTORE
+- **StorageAudit 模型** — 操作者、资源 UUID、操作类型、目标、结果、详情、客户端 IP
+- **StorageAuditService** — `log()` 方法 fire-and-forget 不阻塞主流程，`search()` 支持多条件过滤分页
+- **StorageAuditController** — `GET /api/v1/storage/audit?tenantId=&resourceUuid=&action=&operatorId=&page=&size=`
+
+#### 内容扫描 Content Scan Runtime
+- **ScanType 枚举** — VIRUS / SENSITIVE / MALWARE / IMAGE_DETECTION
+- **ScanStatus 枚举** — PENDING / SCANNING / CLEAN / INFECTED / BLOCKED
+- **StorageScan 模型** — 扫描记录追踪，`create()` 工厂方法
+- **StorageScanService** — `createScan()` / `updateScanResult()` / `search()`，`ScanNotFoundException`
+- **ScanProvider SPI 接口** — `ScanProvider` 接口定义 `scan(resourceUuid, content, mimeType) → ScanResult`，支持外部插件接入
+- **StorageScanController** — `POST/PUT/GET /api/v1/storage/scan`
+
+#### 监控仪表板 Monitoring Dashboard
+- **PlatformDashboardService** — 实时聚合查询：资源总数、活跃租户数、驱动健康度、审计统计、待扫描数、生命周期阶段分布
+- **PlatformDashboardController** — `GET /api/v1/storage/dashboard`
+- **DashboardData 值对象** — totalResources / activeTenants / totalDrivers / healthyDrivers / auditsToday / scansPending / stageCounts
+
+#### 配置与基础设施
+- **StorageProperties.Platform** 配置类 — `default-tenant-id` / `audit-enabled` / `default-quota-bytes`
+- **GlobalExceptionHandler** — 新增 8 个 P9 异常处理器（Tenant、Quota、Region、Scan），遵循 ProblemDetail RFC 9457
+- **V10 Flyway 迁移** — 5 张新表 + 3 处 ALTER TABLE + 3 个新索引 + 默认租户和配额种子数据
+
+#### 技术要点
+- 全链路租户隔离：`tenant_id` 贯穿 Resource → Metadata → AccessLog，默认值 `'default'` 向后兼容
+- 同步配额校验：上传时调用 `QuotaService.checkAndReserve()`，超限立即拒绝（HTTP 413）
+- 审计 fire-and-forget：审计写入异常不传播到主流程
+- 内容扫描 SPI：定义扩展点不实现具体扫描器，支持插件化接入
+- 严格遵循 Hexagonal 架构：Entity → Converter → Domain → Repository → Service → Controller
+- 5 套新测试覆盖：`StorageTenantControllerTest` / `StorageRegionControllerTest` / `StorageQuotaControllerTest` / `StorageAuditControllerTest` / `PlatformDashboardControllerTest`
+
+---
+
 ## [0.9.0] — 2026-07-16
 
 ### Added — P8 Lifecycle Runtime（资源生命周期治理运行时）

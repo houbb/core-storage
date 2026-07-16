@@ -123,9 +123,9 @@ class StorageResourceServiceTest {
 
     @Test
     void searchReturnsPaginatedResults() {
-        when(resourceRepo.countSearch(any(), any(), any(), any(), any(), any(), any(), any()))
+        when(resourceRepo.countSearch(any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(10);
-        when(resourceRepo.search(any(), any(), any(), any(), any(), any(), any(), any(),
+        when(resourceRepo.search(any(), any(), any(), any(), any(), any(), any(), any(), any(),
                 any(), any(), anyInt(), anyInt()))
                 .thenReturn(List.of(
                         buildResource("r1", "m1", "a.png", ResourceType.IMAGE, ResourceCategory.AVATAR, ResourceStatus.READY),
@@ -144,9 +144,9 @@ class StorageResourceServiceTest {
 
     @Test
     void searchEmptyReturnsEmptyList() {
-        when(resourceRepo.countSearch(any(), any(), any(), any(), any(), any(), any(), any()))
+        when(resourceRepo.countSearch(any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(0);
-        when(resourceRepo.search(any(), any(), any(), any(), any(), any(), any(), any(),
+        when(resourceRepo.search(any(), any(), any(), any(), any(), any(), any(), any(), any(),
                 any(), any(), anyInt(), anyInt()))
                 .thenReturn(List.of());
 

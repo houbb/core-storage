@@ -28,6 +28,7 @@ public class StorageMetadata {
     private String remark;
     private String status;
     private boolean deleted;
+    private String tenantId;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private String createUser;
@@ -121,6 +122,9 @@ public class StorageMetadata {
 
     public boolean isDeleted() { return deleted; }
     public void setDeleted(boolean deleted) { this.deleted = deleted; }
+
+    public String getTenantId() { return tenantId; }
+    public void setTenantId(String tenantId) { this.tenantId = tenantId; }
 
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }

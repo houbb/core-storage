@@ -50,6 +50,7 @@ public class StorageMetadataRepository {
         e.setRemark(rs.getString("remark"));
         e.setStatus(rs.getString("status"));
         e.setDeleted(rs.getInt("deleted"));
+        e.setTenantId(rs.getString("tenant_id"));
         Timestamp ct = rs.getTimestamp("create_time");
         if (ct != null) e.setCreateTime(ct.toLocalDateTime());
         Timestamp ut = rs.getTimestamp("update_time");
@@ -76,8 +77,8 @@ public class StorageMetadataRepository {
                 "file_size, hash_sha256, storage_driver, storage_key, " +
                 "relative_path, storage_name, storage_type, " +
                 "owner_type, owner_id, system_name, module_name, tags, remark, " +
-                "status, deleted, create_time, update_time, create_user, update_user" +
-                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+                "status, deleted, tenant_id, create_time, update_time, create_user, update_user" +
+                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbc.update(con -> {
@@ -103,6 +104,7 @@ public class StorageMetadataRepository {
             ps.setString(i++, entity.getRemark());
             ps.setString(i++, entity.getStatus());
             ps.setInt(i++, entity.getDeleted() != null ? entity.getDeleted() : 0);
+            ps.setString(i++, entity.getTenantId() != null ? entity.getTenantId() : "default");
             ps.setTimestamp(i++, Timestamp.valueOf(entity.getCreateTime()));
             ps.setTimestamp(i++, Timestamp.valueOf(entity.getUpdateTime()));
             ps.setString(i++, entity.getCreateUser());

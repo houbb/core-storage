@@ -62,7 +62,7 @@ class StorageResourceControllerTest {
                 new SearchResultResponse<>(List.of(item), 1, 20, 1);
 
         when(resourceService.search(
-                any(), any(), any(), any(), any(), any(), any(), any(),
+                any(), any(), any(), any(), any(), any(), any(), any(), any(),
                 any(), any(), anyInt(), anyInt()))
                 .thenReturn(result);
 

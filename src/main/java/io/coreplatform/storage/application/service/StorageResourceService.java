@@ -61,6 +61,27 @@ public class StorageResourceService {
                                            List<String> tags,
                                            Map<String, String> properties,
                                            String profileName) {
+        return createResource(metadataUuid, resourceName, resourceType, category, description,
+                ownerType, ownerId, visibility, accessMode, tags, properties, profileName, "default");
+    }
+
+    /**
+     * 创建资源（上传时调用，支持指定 tenantId）。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public StorageResource createResource(String metadataUuid,
+                                           String resourceName,
+                                           String resourceType,
+                                           String category,
+                                           String description,
+                                           String ownerType,
+                                           String ownerId,
+                                           String visibility,
+                                           String accessMode,
+                                           List<String> tags,
+                                           Map<String, String> properties,
+                                           String profileName,
+                                           String tenantId) {
         StorageResource resource = new StorageResource();
         resource.setResourceUuid(UUID.randomUUID().toString().replace("-", ""));
         resource.setMetadataUuid(metadataUuid);
@@ -74,6 +95,7 @@ public class StorageResourceService {
         resource.setAccessMode(safeEnum(AccessMode.class, accessMode, AccessMode.PUBLIC));
         resource.setStatus(ResourceStatus.UPLOADING);
         resource.setProfileName(profileName != null && !profileName.isBlank() ? profileName : "default");
+        resource.setTenantId(tenantId != null ? tenantId : "default");
 
         StorageResource saved = resourceRepo.save(resource);
 
@@ -113,13 +135,25 @@ public class StorageResourceService {
             String visibility, String ownerType, String ownerId,
             String tag, String status,
             String sort, String order, int page, int size) {
+        return search(keyword, resourceType, category, visibility, ownerType, ownerId,
+                tag, status, null, sort, order, page, size);
+    }
+
+    /**
+     * 搜索资源（含租户过滤）。
+     */
+    public SearchResultResponse<StorageResourceResponse> search(
+            String keyword, String resourceType, String category,
+            String visibility, String ownerType, String ownerId,
+            String tag, String status, String tenantId,
+            String sort, String order, int page, int size) {
 
         int total = resourceRepo.countSearch(keyword, resourceType, category,
-                visibility, ownerType, ownerId, tag, status);
+                visibility, ownerType, ownerId, tag, status, tenantId);
 
         int offset = Math.max(0, page - 1) * size;
         List<StorageResource> list = resourceRepo.search(keyword, resourceType, category,
-                visibility, ownerType, ownerId, tag, status,
+                visibility, ownerType, ownerId, tag, status, tenantId,
                 sort, order, offset, size);
 
         List<StorageResourceResponse> items = list.stream().map(r -> {

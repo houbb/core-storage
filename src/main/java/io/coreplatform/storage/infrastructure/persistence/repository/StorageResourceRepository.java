@@ -39,6 +39,7 @@ public class StorageResourceRepository {
         e.setAccessMode(rs.getString("access_mode"));
         e.setProfileName(rs.getString("profile_name"));
         e.setLifecycleStage(rs.getString("lifecycle_stage"));
+        e.setTenantId(rs.getString("tenant_id"));
         Timestamp ct = rs.getTimestamp("create_time");
         if (ct != null) e.setCreateTime(ct.toLocalDateTime());
         Timestamp ut = rs.getTimestamp("update_time");
@@ -62,9 +63,9 @@ public class StorageResourceRepository {
 
         String sql = "INSERT INTO storage_resource (" +
                 "resource_uuid, metadata_uuid, resource_name, resource_type, category, " +
-                "description, owner_type, owner_id, visibility, access_mode, profile_name, status, " +
+                "description, owner_type, owner_id, visibility, access_mode, profile_name, lifecycle_stage, tenant_id, status, " +
                 "create_time, update_time, create_user, update_user" +
-                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbc.update(con -> {
@@ -81,6 +82,8 @@ public class StorageResourceRepository {
             ps.setString(i++, entity.getVisibility());
             ps.setString(i++, entity.getAccessMode() != null ? entity.getAccessMode() : "PUBLIC");
             ps.setString(i++, entity.getProfileName());
+            ps.setString(i++, entity.getLifecycleStage() != null ? entity.getLifecycleStage() : "ACTIVE");
+            ps.setString(i++, entity.getTenantId() != null ? entity.getTenantId() : "default");
             ps.setString(i++, entity.getStatus());
             ps.setTimestamp(i++, Timestamp.valueOf(entity.getCreateTime()));
             ps.setTimestamp(i++, Timestamp.valueOf(entity.getUpdateTime()));
@@ -151,6 +154,16 @@ public class StorageResourceRepository {
                                          String visibility, String ownerType, String ownerId,
                                          String tag, String status,
                                          String sort, String order, int offset, int limit) {
+        return search(keyword, resourceType, category, visibility, ownerType, ownerId, tag, status, null, sort, order, offset, limit);
+    }
+
+    /**
+     * 条件搜索 + 分页 + 排序（含租户过滤）。
+     */
+    public List<StorageResource> search(String keyword, String resourceType, String category,
+                                         String visibility, String ownerType, String ownerId,
+                                         String tag, String status, String tenantId,
+                                         String sort, String order, int offset, int limit) {
         StringBuilder sql = new StringBuilder("SELECT r.* FROM storage_resource r WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
@@ -185,6 +198,10 @@ public class StorageResourceRepository {
             sql.append(" AND r.status = ?");
             params.add(status);
         }
+        if (tenantId != null && !tenantId.isBlank()) {
+            sql.append(" AND r.tenant_id = ?");
+            params.add(tenantId);
+        }
         // tag 过滤通过子查询
         if (tag != null && !tag.isBlank()) {
             sql.append(" AND EXISTS (SELECT 1 FROM storage_resource_tag t WHERE t.resource_uuid = r.resource_uuid AND t.tag_name = ?)");
@@ -215,6 +232,15 @@ public class StorageResourceRepository {
     public int countSearch(String keyword, String resourceType, String category,
                             String visibility, String ownerType, String ownerId,
                             String tag, String status) {
+        return countSearch(keyword, resourceType, category, visibility, ownerType, ownerId, tag, status, null);
+    }
+
+    /**
+     * 搜索总数（含租户过滤）。
+     */
+    public int countSearch(String keyword, String resourceType, String category,
+                            String visibility, String ownerType, String ownerId,
+                            String tag, String status, String tenantId) {
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM storage_resource r WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
@@ -248,6 +274,10 @@ public class StorageResourceRepository {
         if (status != null && !status.isBlank()) {
             sql.append(" AND r.status = ?");
             params.add(status);
+        }
+        if (tenantId != null && !tenantId.isBlank()) {
+            sql.append(" AND r.tenant_id = ?");
+            params.add(tenantId);
         }
         if (tag != null && !tag.isBlank()) {
             sql.append(" AND EXISTS (SELECT 1 FROM storage_resource_tag t WHERE t.resource_uuid = r.resource_uuid AND t.tag_name = ?)");

@@ -19,6 +19,8 @@ public class StorageProperties {
 
     private Lifecycle lifecycle = new Lifecycle();
 
+    private Platform platform = new Platform();
+
     // ---- getters & setters ----
 
     public String getDriver() {
@@ -67,6 +69,14 @@ public class StorageProperties {
 
     public void setLifecycle(Lifecycle lifecycle) {
         this.lifecycle = lifecycle;
+    }
+
+    public Platform getPlatform() {
+        return platform;
+    }
+
+    public void setPlatform(Platform platform) {
+        this.platform = platform;
     }
 
     public static class Local {
@@ -183,6 +193,41 @@ public class StorageProperties {
 
         public void setDeleteGracePeriodDays(int deleteGracePeriodDays) {
             this.deleteGracePeriodDays = deleteGracePeriodDays;
+        }
+    }
+
+    public static class Platform {
+        /** 默认租户 ID（用于向后兼容 P0-P8 资源） */
+        private String defaultTenantId = "default";
+
+        /** 是否启用审计 */
+        private boolean auditEnabled = true;
+
+        /** 默认配额（字节），0 表示无限 */
+        private long defaultQuotaBytes = 0;
+
+        public String getDefaultTenantId() {
+            return defaultTenantId;
+        }
+
+        public void setDefaultTenantId(String defaultTenantId) {
+            this.defaultTenantId = defaultTenantId;
+        }
+
+        public boolean isAuditEnabled() {
+            return auditEnabled;
+        }
+
+        public void setAuditEnabled(boolean auditEnabled) {
+            this.auditEnabled = auditEnabled;
+        }
+
+        public long getDefaultQuotaBytes() {
+            return defaultQuotaBytes;
+        }
+
+        public void setDefaultQuotaBytes(long defaultQuotaBytes) {
+            this.defaultQuotaBytes = defaultQuotaBytes;
         }
     }
 }

@@ -33,3 +33,7 @@ core:
       scheduler-interval-ms: 60000
       max-batch-size: 50
       delete-grace-period-days: 7
+    platform:
+      default-tenant-id: default
+      audit-enabled: true
+      default-quota-bytes: 0

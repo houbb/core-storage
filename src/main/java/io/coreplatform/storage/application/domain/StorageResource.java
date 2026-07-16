@@ -28,6 +28,7 @@ public class StorageResource {
     private int referenceCount;
     private String profileName;
     private LifecycleStage lifecycleStage;
+    private String tenantId;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private String createUser;
@@ -83,6 +84,9 @@ public class StorageResource {
 
     public LifecycleStage getLifecycleStage() { return lifecycleStage; }
     public void setLifecycleStage(LifecycleStage lifecycleStage) { this.lifecycleStage = lifecycleStage; }
+
+    public String getTenantId() { return tenantId; }
+    public void setTenantId(String tenantId) { this.tenantId = tenantId; }
 
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }

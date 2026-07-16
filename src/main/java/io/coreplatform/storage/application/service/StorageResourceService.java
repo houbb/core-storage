@@ -174,16 +174,30 @@ public class StorageResourceService {
     }
 
     /**
-     * 软删除资源。
+     * 进入生命周期删除流程（不是立即物理删除）。
+     * <p>
+     * 两阶段删除：Step 1 — 标记 lifecycle_stage = DELETED，status = DELETED；
+     * Step 2 — grace period 后由 LifecycleScheduler 执行物理删除。
+     * 在 grace period 内管理员可以恢复。
      */
     @Transactional(rollbackFor = Exception.class)
-    public void softDelete(String resourceUuid) {
+    public void enterLifecycleDeletion(String resourceUuid) {
         StorageResource r = resourceRepo.findByResourceUuid(resourceUuid)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found: uuid=" + resourceUuid));
 
+        resourceRepo.updateLifecycleStage(resourceUuid, "DELETED");
         resourceRepo.updateStatus(resourceUuid, ResourceStatus.DELETED.name());
         tagRepo.deleteByResourceUuid(resourceUuid);
-        log.info("Resource soft-deleted: resourceUuid={}", resourceUuid);
+        log.info("Resource entered lifecycle deletion: resourceUuid={}", resourceUuid);
+    }
+
+    /**
+     * 软删除资源（保持向后兼容，内部调用 enterLifecycleDeletion）。
+     * @deprecated 请使用 {@link #enterLifecycleDeletion(String)}
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void softDelete(String resourceUuid) {
+        enterLifecycleDeletion(resourceUuid);
     }
 
     /**
@@ -226,6 +240,7 @@ public class StorageResourceService {
         resp.setAccessMode(r.getAccessMode() != null ? r.getAccessMode().name() : "PUBLIC");
         resp.setProfileName(r.getProfileName());
         resp.setStatus(r.getStatus() != null ? r.getStatus().name() : null);
+        resp.setLifecycleStage(r.getLifecycleStage() != null ? r.getLifecycleStage().name() : "ACTIVE");
         resp.setTags(r.getTags());
         resp.setProperties(r.getProperties().stream()
                 .map(p -> new StorageResourceResponse.PropertyItem(p.getKey(), p.getValue()))

@@ -3,8 +3,9 @@ import { ref } from 'vue'
 import StoragePage from './pages/StoragePage.vue'
 import MetadataPage from './pages/MetadataPage.vue'
 import ResourcePage from './pages/ResourcePage.vue'
+import LifecyclePage from './pages/LifecyclePage.vue'
 
-const activeTab = ref<'upload' | 'metadata' | 'resource'>('upload')
+const activeTab = ref<'upload' | 'metadata' | 'resource' | 'lifecycle'>('upload')
 </script>
 
 <template>
@@ -30,11 +31,19 @@ const activeTab = ref<'upload' | 'metadata' | 'resource'>('upload')
     >
       🧩 资源中心
     </button>
+    <button
+      class="tab-btn"
+      :class="{ active: activeTab === 'lifecycle' }"
+      @click="activeTab = 'lifecycle'"
+    >
+      🔄 生命周期
+    </button>
   </div>
 
   <StoragePage v-if="activeTab === 'upload'" />
   <MetadataPage v-else-if="activeTab === 'metadata'" />
-  <ResourcePage v-else />
+  <ResourcePage v-else-if="activeTab === 'resource'" />
+  <LifecyclePage v-else />
 </template>
 
 <style scoped>

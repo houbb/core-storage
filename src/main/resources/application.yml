@@ -29,3 +29,7 @@ core:
       date-path: true
     database:
       enabled: false
+    lifecycle:
+      scheduler-interval-ms: 60000
+      max-batch-size: 50
+      delete-grace-period-days: 7

@@ -14,6 +14,7 @@ public enum ResourceType {
     PLUGIN,
     TEMPLATE,
     MODEL,
+    MODEL_3D,
     BACKUP,
     EXPORT,
     ICON,

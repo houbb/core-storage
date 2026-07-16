@@ -49,6 +49,11 @@
             </div>
           </div>
 
+          <!-- 生命周期面板 -->
+          <div class="lifecycle-section">
+            <ResourceLifecyclePanel :uuid="resource.resourceUuid" />
+          </div>
+
           <!-- 标签 -->
           <div class="tag-section" v-if="resource.tags && resource.tags.length > 0">
             <h4>标签</h4>
@@ -86,6 +91,7 @@
 import { ref, watch, computed } from 'vue'
 import { useResourceStore } from '../stores/resource'
 import type { ResourceItem } from '../api/storage'
+import ResourceLifecyclePanel from './ResourceLifecyclePanel.vue'
 
 const props = defineProps<{ uuid: string }>()
 const emit = defineEmits<{

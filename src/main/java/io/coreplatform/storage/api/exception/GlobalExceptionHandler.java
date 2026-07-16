@@ -1,6 +1,10 @@
 package io.coreplatform.storage.api.exception;
 
+import io.coreplatform.storage.application.service.LifecycleEngine;
+import io.coreplatform.storage.application.service.LifecyclePolicyService;
 import io.coreplatform.storage.application.service.ReplicationService;
+import io.coreplatform.storage.application.service.ResourceHoldService;
+import io.coreplatform.storage.application.service.StorageAccessService;
 import io.coreplatform.storage.application.service.StorageAccessService;
 import io.coreplatform.storage.application.service.StorageAccessService.AccessDeniedException;
 import io.coreplatform.storage.application.service.StorageImageService;
@@ -298,6 +302,68 @@ public class GlobalExceptionHandler {
         pd.setTitle("Alias already exists");
         pd.setType(URI.create("https://core-platform.dev/problems/alias-already-exists"));
         pd.setProperty("errorCode", "STORAGE_ALIAS_ALREADY_EXISTS");
+        return pd;
+    }
+
+    // ---- P8: Lifecycle exceptions ----
+
+    @ExceptionHandler(LifecyclePolicyService.PolicyNotFoundException.class)
+    public ProblemDetail handlePolicyNotFound(LifecyclePolicyService.PolicyNotFoundException ex) {
+        log.warn("Policy not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Policy not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/policy-not-found"));
+        pd.setProperty("errorCode", "STORAGE_POLICY_NOT_FOUND");
+        return pd;
+    }
+
+    @ExceptionHandler(LifecyclePolicyService.PolicyAlreadyExistsException.class)
+    public ProblemDetail handlePolicyAlreadyExists(LifecyclePolicyService.PolicyAlreadyExistsException ex) {
+        log.warn("Policy already exists: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setTitle("Policy already exists");
+        pd.setType(URI.create("https://core-platform.dev/problems/policy-already-exists"));
+        pd.setProperty("errorCode", "STORAGE_POLICY_ALREADY_EXISTS");
+        return pd;
+    }
+
+    @ExceptionHandler(LifecycleEngine.InvalidLifecycleStateException.class)
+    public ProblemDetail handleInvalidLifecycleState(LifecycleEngine.InvalidLifecycleStateException ex) {
+        log.warn("Invalid lifecycle state: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setTitle("Invalid lifecycle state");
+        pd.setType(URI.create("https://core-platform.dev/problems/invalid-lifecycle-state"));
+        pd.setProperty("errorCode", "STORAGE_INVALID_LIFECYCLE_STATE");
+        return pd;
+    }
+
+    @ExceptionHandler(LifecycleEngine.ReferenceProtectionException.class)
+    public ProblemDetail handleReferenceProtection(LifecycleEngine.ReferenceProtectionException ex) {
+        log.warn("Reference protection blocked operation: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setTitle("Reference protection");
+        pd.setType(URI.create("https://core-platform.dev/problems/reference-protection"));
+        pd.setProperty("errorCode", "STORAGE_REFERENCE_PROTECTION");
+        return pd;
+    }
+
+    @ExceptionHandler(ResourceHoldService.HoldAlreadyExistsException.class)
+    public ProblemDetail handleHoldAlreadyExists(ResourceHoldService.HoldAlreadyExistsException ex) {
+        log.warn("Hold already exists: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setTitle("Hold already exists");
+        pd.setType(URI.create("https://core-platform.dev/problems/hold-already-exists"));
+        pd.setProperty("errorCode", "STORAGE_HOLD_ALREADY_EXISTS");
+        return pd;
+    }
+
+    @ExceptionHandler(ResourceHoldService.HoldNotFoundException.class)
+    public ProblemDetail handleHoldNotFound(ResourceHoldService.HoldNotFoundException ex) {
+        log.warn("Hold not found: {}", ex.getMessage());
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle("Hold not found");
+        pd.setType(URI.create("https://core-platform.dev/problems/hold-not-found"));
+        pd.setProperty("errorCode", "STORAGE_HOLD_NOT_FOUND");
         return pd;
     }
 

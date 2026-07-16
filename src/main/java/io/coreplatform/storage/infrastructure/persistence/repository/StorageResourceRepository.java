@@ -38,6 +38,7 @@ public class StorageResourceRepository {
         e.setStatus(rs.getString("status"));
         e.setAccessMode(rs.getString("access_mode"));
         e.setProfileName(rs.getString("profile_name"));
+        e.setLifecycleStage(rs.getString("lifecycle_stage"));
         Timestamp ct = rs.getTimestamp("create_time");
         if (ct != null) e.setCreateTime(ct.toLocalDateTime());
         Timestamp ut = rs.getTimestamp("update_time");
@@ -255,5 +256,34 @@ public class StorageResourceRepository {
 
         Integer count = jdbc.queryForObject(sql.toString(), Integer.class, params.toArray());
         return count != null ? count : 0;
+    }
+
+    /**
+     * 更新资源的生命周期阶段。
+     */
+    public int updateLifecycleStage(String resourceUuid, String lifecycleStage) {
+        return jdbc.update(
+                "UPDATE storage_resource SET lifecycle_stage = ?, update_time = ? WHERE resource_uuid = ?",
+                lifecycleStage, Timestamp.valueOf(LocalDateTime.now()), resourceUuid);
+    }
+
+    /**
+     * 按生命周期阶段统计资源数量。
+     */
+    public int countByLifecycleStage(String lifecycleStage) {
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM storage_resource WHERE lifecycle_stage = ?",
+                Integer.class, lifecycleStage);
+        return count != null ? count : 0;
+    }
+
+    /**
+     * 查询所有非 DELETED 状态的资源（用于调度器扫描）。
+     */
+    public List<StorageResource> findActiveForLifecycle() {
+        List<StorageResourceEntity> entities = jdbc.query(
+                "SELECT * FROM storage_resource WHERE lifecycle_stage != 'DELETED' AND status != 'DELETED'",
+                ROW_MAPPER);
+        return entities.stream().map(StorageResourceConverter::toDomain).toList();
     }
 }

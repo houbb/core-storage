@@ -17,6 +17,8 @@ public class StorageProperties {
 
     private Replication replication = new Replication();
 
+    private Lifecycle lifecycle = new Lifecycle();
+
     // ---- getters & setters ----
 
     public String getDriver() {
@@ -57,6 +59,14 @@ public class StorageProperties {
 
     public void setReplication(Replication replication) {
         this.replication = replication;
+    }
+
+    public Lifecycle getLifecycle() {
+        return lifecycle;
+    }
+
+    public void setLifecycle(Lifecycle lifecycle) {
+        this.lifecycle = lifecycle;
     }
 
     public static class Local {
@@ -138,6 +148,41 @@ public class StorageProperties {
 
         public void setChecksumVerify(boolean checksumVerify) {
             this.checksumVerify = checksumVerify;
+        }
+    }
+
+    public static class Lifecycle {
+        /** 调度器扫描间隔（毫秒），默认 60000（1 分钟） */
+        private long schedulerIntervalMs = 60000;
+
+        /** 每批最大处理资源数 */
+        private int maxBatchSize = 50;
+
+        /** 删除前的宽限期（天），默认 7 天 */
+        private int deleteGracePeriodDays = 7;
+
+        public long getSchedulerIntervalMs() {
+            return schedulerIntervalMs;
+        }
+
+        public void setSchedulerIntervalMs(long schedulerIntervalMs) {
+            this.schedulerIntervalMs = schedulerIntervalMs;
+        }
+
+        public int getMaxBatchSize() {
+            return maxBatchSize;
+        }
+
+        public void setMaxBatchSize(int maxBatchSize) {
+            this.maxBatchSize = maxBatchSize;
+        }
+
+        public int getDeleteGracePeriodDays() {
+            return deleteGracePeriodDays;
+        }
+
+        public void setDeleteGracePeriodDays(int deleteGracePeriodDays) {
+            this.deleteGracePeriodDays = deleteGracePeriodDays;
         }
     }
 }

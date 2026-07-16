@@ -20,6 +20,7 @@ public class StorageResourceEntity {
     private String status;
     private String accessMode;
     private String profileName;
+    private String lifecycleStage;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private String createUser;
@@ -66,6 +67,9 @@ public class StorageResourceEntity {
 
     public String getProfileName() { return profileName; }
     public void setProfileName(String profileName) { this.profileName = profileName; }
+
+    public String getLifecycleStage() { return lifecycleStage; }
+    public void setLifecycleStage(String lifecycleStage) { this.lifecycleStage = lifecycleStage; }
 
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }

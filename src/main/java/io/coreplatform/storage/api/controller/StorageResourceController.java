@@ -57,9 +57,9 @@ public class StorageResourceController {
     }
 
     @DeleteMapping("/{uuid}")
-    @Operation(summary = "软删除资源")
+    @Operation(summary = "进入生命周期删除流程（两阶段：软删除→宽限期→物理删除）")
     public ResponseEntity<Void> deleteResource(@PathVariable String uuid) {
-        resourceService.softDelete(uuid);
+        resourceService.enterLifecycleDeletion(uuid);
         return ResponseEntity.noContent().build();
     }
 

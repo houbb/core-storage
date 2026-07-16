@@ -1,5 +1,142 @@
 # CHANGELOG
 
+## [0.9.0] — 2026-07-16
+
+### Added — P8 Lifecycle Runtime（资源生命周期治理运行时）
+
+**核心概念：资源有生命周期，不是永久存在。**
+
+- **LifecycleStage 枚举（5 阶段）** — ACTIVE → WARM → COLD → ARCHIVED → DELETED，资源从创建到删除经历完整的生命周期演进
+- **LifecycleAction 枚举（6 种操作）** — NOTHING / MOVE / ARCHIVE / FREEZE / DELETE / VERIFY，新增操作无需修改架构
+- **LifecycleTaskStatus 枚举（5 态）** — PENDING → RUNNING → COMPLETED / FAILED / CANCELLED，所有生命周期操作用 Task 模型管理
+- **HoldType 枚举（3 种）** — LEGAL / AUDIT / INVESTIGATION，对标 S3 Object Lock / 金融档案系统的 Legal Hold 能力
+- **ResourceType 扩展** — 新增 `MODEL_3D` 资源类型，支持 3D 模型文件的前端实时渲染和专属生命周期管理
+- **LifecyclePolicy 模型** — 策略绑定 `resource_type + category`，定义各阶段保留天数（active_days / warm_days / cold_days / archive_days / delete_days）。`delete_days=0` 表示永久保留。`targetStage(daysSinceCreation)` 方法计算给定天数后应处阶段
+- **LifecycleTask 模型** — Task + Scheduler 执行模型，与 SyncTask 架构一致。`create()` 工厂方法 + 完整生命周期追踪（resource_uuid / policy_id / action / target_stage / status / retry_count / error_message）
+- **ResourceHold（Legal Hold / 法律保留）** — 资源冻结能力，阻止所有生命周期操作（删除/归档/移动）。`isActive()` 方法综合判断 released + expireTime。支持 Legal Hold、Audit Hold、Investigation Hold
+- **LifecyclePolicyService** — 策略 CRUD 管理服务：
+  - `createPolicy()` — 按 resource_type + category 唯一性校验
+  - `listPolicies()` / `getById()` — 查询
+  - `updatePolicy()` — 字段级部分更新
+  - `deletePolicy()` — 删除策略
+- **LifecycleEngine** — 核心生命周期状态机：
+  - `evaluateResource()` — 评估单个资源是否需要阶段转换（匹配策略 → 检查活跃任务 → 检查 Hold → 计算目标阶段 → 创建任务）
+  - `executeTask()` — 执行生命周期任务：NOTHING（空操作）、MOVE/ARCHIVE（引用保护检查 → 更新 lifecycle_stage）、DELETE（引用保护检查 → 两阶段删除：标记 DELETED + status=DELETED）、VERIFY（校验占位）、FREEZE（冻结占位）
+  - `triggerLifecycle()` — 手动触发资源评估
+  - `archiveResource()` — 手动归档（Hold 检查 + 引用检查）
+  - `restoreResource()` — 从归档恢复
+  - `stageOrdinal()` / `determineAction()` — 阶段排序 + 目标阶段到 Action 映射
+  - **引用保护** — `checkReferences()` 执行前校验 `referenceRepo.countByMetadataUuid() > 0` → 抛出 `ReferenceProtectionException`
+- **LifecycleScheduler** — `@Scheduled` 双周期扫描：
+  - `evaluateResources()` — 扫描所有活跃资源（lifecycle_stage != DELETED AND status != DELETED），匹配策略创建 PENDING 任务
+  - `processPendingTasks()` — 扫描 PENDING 任务并调用 Engine 执行
+  - 配置项：`core.storage.lifecycle.scheduler-interval-ms`（默认 60000ms）、`core.storage.lifecycle.max-batch-size`（默认 50）、`core.storage.lifecycle.delete-grace-period-days`（默认 7 天）
+- **ResourceHoldService** — 法律保留管理服务：
+  - `placeHold()` — 设置 Hold（资源存在性校验 + 活跃 Hold 重复检测）
+  - `releaseHold()` — 批量解除所有活跃 Hold
+  - `hasActiveHold()` / `listHolds()` / `countActiveHolds()` — 查询方法
+- **两阶段删除** — `DELETE /resources/{uuid}` 端点现已进入生命周期删除流程：
+  - Phase 1（立即）：标记 `lifecycle_stage = DELETED` + `status = DELETED`
+  - Phase 2（宽限期后）：由 LifecycleScheduler 执行物理删除（grace period 默认 7 天，可配置）
+  - 宽限期内管理员可通过 `POST /resources/{uuid}/restore` 恢复
+- **StorageResource 链扩展** — lifecycle_stage 贯穿全链路：
+  - `StorageResourceEntity` — +`lifecycleStage` 字段（TEXT，默认 'ACTIVE'）
+  - `StorageResource` (domain) — +`LifecycleStage lifecycleStage` 枚举字段
+  - `StorageResourceConverter` — `toDomain`/`toEntity` 双向映射 lifecycleStage
+  - `StorageResourceRepository` — +3 方法：`updateLifecycleStage()` / `countByLifecycleStage()` / `findActiveForLifecycle()`
+  - `StorageResourceResponse` — +`lifecycleStage` 字段
+  - `StorageResourceService.toResponse()` — 填充 lifecycleStage 信息
+  - `StorageResourceService.softDelete()` → `enterLifecycleDeletion()` — 进入生命周期删除
+- **REST API — 13 个端点**（`LifecycleController`）：
+  - Dashboard：`GET /lifecycle/dashboard` — 各阶段资源数 + Active Holds 数 + Pending Tasks 数 + Total Policies
+  - 策略管理：`GET /lifecycle/policies`（列表）、`POST /lifecycle/policies`（创建）、`PUT /lifecycle/policies/{id}`（更新）、`DELETE /lifecycle/policies/{id}`（删除）
+  - 资源生命周期：`GET /lifecycle/resources/{uuid}/state`（状态）、`POST /lifecycle/resources/{uuid}/run`（手动触发）、`POST /lifecycle/resources/{uuid}/archive`（归档）、`POST /lifecycle/resources/{uuid}/restore`（恢复）
+  - Legal Hold：`POST /lifecycle/resources/{uuid}/hold`（设置）、`DELETE /lifecycle/resources/{uuid}/hold`（解除）、`GET /lifecycle/resources/{uuid}/holds`（列表）
+  - 任务查询：`GET /lifecycle/resources/{uuid}/tasks`（资源关联任务）、`GET /lifecycle/tasks`（全局任务列表，支持 status + resourceUuid 过滤 + 分页）
+- **响应 DTO** — 4 个新 Response 类：
+  - `LifecyclePolicyResponse`（id / policyName / resourceType / category / active~deleteDays / enabled / description / createTime / updateTime）
+  - `LifecycleTaskResponse`（id / resourceUuid / policyId / action / targetStage / status / executeTime / finishTime / errorMessage / retryCount）
+  - `LifecycleDashboardResponse`（stageCounts Map / activeHolds / pendingTasks / totalPolicies）
+  - `ResourceHoldResponse`（id / resourceUuid / holdType / reason / operatorId / expireTime / released / releasedTime / releaseOperatorId）
+- **前端 Vue3**：
+  - `LifecyclePage` — 主页面，双 Tab（📊 仪表盘 / 📋 策略管理）：
+    - Dashboard Tab：各阶段资源数统计卡片 + Active Holds / Pending Tasks / Total Policies 摘要行
+    - Policies Tab：策略表格（名称 / 类型 / 分类 / 时间线摘要 / 启用状态 / 操作），+ 新建/编辑/删除
+  - `LifecyclePolicyModal` — 策略 CRUD 弹窗：表单布局（策略名称 / 资源类型下拉 / 分类下拉 / 各阶段天数 / 描述），支持创建和编辑双模式
+  - `ResourceLifecyclePanel` — 嵌入资源详情抽屉的生命周期面板：
+    - 阶段时间轴（5 点水平轴线，当前阶段高亮，已过阶段填充色）
+    - Legal Hold 状态 + Hold 列表 + 设置/解除 Hold 内联表单
+    - 操作按钮：归档 / 恢复 / Hold
+  - `App.vue` — +「🔄 生命周期」Tab
+  - `ResourcePage.vue` — 表格视图 +「生命周期」列
+  - `ResourceDetailDrawer.vue` — +`ResourceLifecyclePanel` 内嵌
+- **数据库迁移 V9** — 新增 3 张表 + 1 个 ALTER：
+  - `ALTER TABLE storage_resource ADD COLUMN lifecycle_stage TEXT NOT NULL DEFAULT 'ACTIVE'`
+  - `storage_lifecycle_policy`（policy_name + resource_type + category + active_days + warm_days + cold_days + archive_days + delete_days + enabled + description + create_time + update_time，唯一约束：(resource_type, category)）
+  - `storage_lifecycle_task`（resource_uuid + policy_id + action + target_stage + status + execute_time + finish_time + error_message + retry_count + create_time + update_time）
+  - `storage_resource_hold`（resource_uuid + hold_type + reason + operator_id + expire_time + released + released_time + release_operator_id + create_time）
+  - 4 条种子策略：Export-7Days（DOCUMENT/OTHER, 7d→DELETE）、Backup-180Days（ARCHIVE/BACKUP, 180d→ARCHIVE, 365d→DELETE）、Temp-1Day（OTHER/OTHER, 1d→DELETE）、Model3D-90Days（MODEL_3D/MODEL, 90d→DELETE）
+- **配置项** — `StorageProperties` 新增 `Lifecycle` 内部类（schedulerIntervalMs=60000 / maxBatchSize=50 / deleteGracePeriodDays=7），对应 `application.yml` 中 `core.storage.lifecycle.*` 配置
+- **异常处理** — 6 个 P8 专用异常处理器：
+  - `PolicyNotFoundException`（404）— 策略不存在
+  - `PolicyAlreadyExistsException`（409）— 同一 (resource_type, category) 重复
+  - `InvalidLifecycleStateException`（409）— 非法状态转换
+  - `ReferenceProtectionException`（409）— 引用保护阻止操作
+  - `HoldAlreadyExistsException`（409）— 已有活跃 Hold
+  - `HoldNotFoundException`（404）— 无活跃 Hold 可解除
+- **测试** — 4 个新测试类，25 个测试用例，全部通过：
+  - `LifecyclePolicyServiceTest`（8 用例）— 创建、重复检测、列表、查询、更新、删除、未找到异常
+  - `LifecycleEngineTest`（4 用例）— 无策略返回 null、阶段匹配返回 null、需要转换创建任务、Hold 阻止操作、引用保护检查
+  - `ResourceHoldServiceTest`（7 用例）— 设置 Hold、重复检测、解除、未找到异常、状态查询、计数
+  - `LifecycleControllerTest`（4 用例）— GET policies 200、POST policies 201 + JSON 验证、DELETE policy 204、GET dashboard 200 + JSON 验证
+
+### Changed
+
+- `StorageResourceController` — `DELETE /{uuid}` 端点从 `softDelete()` 改为 `enterLifecycleDeletion()`，进入生命周期两阶段删除
+- `StorageResourceService` — `softDelete()` 保留但标记 `@Deprecated`，内部委托给 `enterLifecycleDeletion()`；`toResponse()` 新增 lifecycleStage 字段填充
+- `ResourceType` 枚举 — 新增 `MODEL_3D`
+- `GlobalExceptionHandler` — 新增 6 个 P8 异常处理器
+
+### Key Design Decisions
+
+1. **删除不是动作，是一段生命周期** — DELETE 端点进入生命周期 DELETED 阶段，两阶段删除（软删除→宽限期→物理删除），宽限期内可恢复
+2. **策略驱动，非代码驱动** — LifecyclePolicy 绑定 resource_type + category，决定保留策略，管理员通过 API 即可修改
+3. **Lifecycle 与 Storage 解耦** — 生命周期引擎只决定资源状态（lifecycle_stage），不直接操作存储介质；真正的迁移/归档/删除由 Driver 执行
+4. **引用保护** — 任何删除/归档操作前检查 `referenceCount > 0` → 抛出 `ReferenceProtectionException`，禁止操作
+5. **Legal Hold 绝对优先** — 资源处于 Hold 状态时，所有生命周期操作（删除/归档/移动）完全禁止，直到 Hold 解除
+6. **Task 模型统一** — 所有生命周期操作通过 LifecycleTask 执行，保证可暂停、可恢复、可重试，与 SyncTask 保持一致
+
+### Architecture
+
+```
+StorageResource (新增 lifecycleStage 字段)
+        │
+LifecyclePolicy (resource_type + category → retention days)
+        │
+LifecycleScheduler (@Scheduled 扫描资源 → 匹配策略 → 创建任务)
+        │
+LifecycleEngine (执行任务：状态转换、归档、删除、验证)
+        │
+ResourceHold (法律保留：冻结资源，阻止生命周期操作)
+
+Lifecycle Timeline:
+  ACTIVE ──[warm_days]──➤ WARM ──[cold_days]──➤ COLD
+      ──[archive_days]──➤ ARCHIVED ──[delete_days]──➤ DELETED
+
+Two-Phase Deletion:
+  DELETE endpoint → lifecycle_stage=DELETED, status=DELETED
+  Grace Period (default 7 days) → Physical Delete (future)
+```
+
+### Backward Compatibility
+
+- P0-P7 API 完全兼容，已有功能无任何破坏
+- `StorageResourceService.softDelete()` 保留（改为委托 `enterLifecycleDeletion()`），外部调用者零影响
+- 已有 Resource 默认 `lifecycle_stage = 'ACTIVE'`，无策略匹配时永久保留
+- 已有 118 个测试全部通过（93 个已有 + 25 个新增 P8），0 失败
+
+---
+
 ## [0.8.0] — 2026-07-16
 
 ### Added — P7 Version Runtime（资源版本管理运行时）

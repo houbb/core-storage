@@ -23,6 +23,7 @@ public class StorageResourceResponse {
     private String accessMode;
     private String status;
     private String profileName;
+    private String lifecycleStage;
     private List<String> tags;
     private List<PropertyItem> properties;
     private int referenceCount;
@@ -91,6 +92,9 @@ public class StorageResourceResponse {
 
     public String getProfileName() { return profileName; }
     public void setProfileName(String profileName) { this.profileName = profileName; }
+
+    public String getLifecycleStage() { return lifecycleStage; }
+    public void setLifecycleStage(String lifecycleStage) { this.lifecycleStage = lifecycleStage; }
 
     public List<String> getTags() { return tags; }
     public void setTags(List<String> tags) { this.tags = tags; }

@@ -77,6 +77,7 @@
                 <th>Owner</th>
                 <th>可见性</th>
                 <th>状态</th>
+                <th>生命周期</th>
                 <th>引用</th>
                 <th>创建时间</th>
               </tr>
@@ -94,6 +95,7 @@
                 <td>{{ item.ownerType ? item.ownerType + '/' + item.ownerId : '-' }}</td>
                 <td><span class="badge badge-visibility">{{ item.visibility }}</span></td>
                 <td><span class="badge" :class="statusBadgeClass(item.status)">{{ item.status }}</span></td>
+                <td><span class="badge badge-lifecycle">{{ item.lifecycleStage || 'ACTIVE' }}</span></td>
                 <td>{{ item.referenceCount }}</td>
                 <td class="col-time">{{ formatTime(item.createTime) }}</td>
               </tr>

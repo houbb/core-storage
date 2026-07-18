@@ -1,5 +1,49 @@
 # CHANGELOG
 
+## [0.11.0] — 2026-07-18
+
+### Changed — 目录结构优化：前后端分离
+
+**核心概念：前端与后端代码独立存放，结构清晰。**
+
+- **后端子目录** — `pom.xml` 和 `src/` 从根目录移入 `core-storage-backend/`，后端代码集中管理
+- **前端重命名** — `web/` 重命名为 `core-storage-frontend/`，命名明确干净
+- **根目录精简** — 根目录仅保留 `README.md`、`LICENSE`、`.gitignore`、`design-docs/`、`core-storage-backend/`、`core-storage-frontend/`
+- **文档同步** — `README.md` 启动命令路径更新，`design-docs/000-tech.md` 中 `web/` 引用更新
+
+#### 验证
+- 后端 130 个单元测试全部通过，0 失败
+- 端到端测试：上传 ✓ / 下载 ✓ / 删除 ✓ / Swagger ✓
+- 前端构建：114 个模块编译通过，零错误
+
+### 最终目录结构
+
+```
+core-storage/
+├── README.md
+├── LICENSE
+├── .gitignore
+├── design-docs/
+├── core-storage-backend/     # Spring Boot 后端
+│   ├── pom.xml
+│   └── src/
+└── core-storage-frontend/    # Vue 3 + Vite 前端
+    ├── package.json
+    └── src/
+```
+
+### 快速开始
+
+```bash
+# 启动后端（端口 8105）
+cd core-storage-backend && mvn spring-boot:run
+
+# 启动前端（端口 5173，自动代理到后端）
+cd core-storage-frontend && npm install && npm run dev
+```
+
+---
+
 ## [0.10.0] — 2026-07-17
 
 ### Added — P9 Enterprise Resource Platform（企业资源平台治理运行时）

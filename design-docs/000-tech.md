@@ -83,7 +83,7 @@ core-identity/
 │   └── test/
 │       └── java/
 │
-├── web/
+├── core-storage-frontend/
 ├── docs/
 └── scripts/
 ```
